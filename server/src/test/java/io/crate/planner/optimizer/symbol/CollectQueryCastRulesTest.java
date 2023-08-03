@@ -95,6 +95,7 @@ public class CollectQueryCastRulesTest extends CrateDummyClusterServiceUnitTest 
 
     private Symbol toQuery(String query) {
         var collect = new Collect(
+            1,
             tr1,
             Collections.emptyList(),
             new WhereClause(e.asSymbol(query))

@@ -27,6 +27,7 @@ import static io.crate.testing.Asserts.assertThat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntSupplier;
 
 import org.junit.Test;
 
@@ -62,6 +63,8 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
 
     private CoordinatorTxnCtx txnCtx = CoordinatorTxnCtx.systemTransactionContext();
     private NodeContext nodeContext = new NodeContext(new Functions(Map.of()), () -> List.of(User.CRATE_USER));
+    private int id = 0;
+    private IntSupplier ids = () -> id++;
 
     @Test
     public void test_collect() throws Exception {
@@ -72,14 +75,15 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         DocTableInfo a = e.resolveTableInfo("a");
 
         var x = e.asSymbol("x");
-        var source = new Collect(new DocTableRelation(a),
+        var source = new Collect(1,
+                                 new DocTableRelation(a),
                                  List.of(x),
                                  WhereClause.MATCH_ALL);
 
         TableStats tableStats = new TableStats();
         tableStats.updateTableStats(Map.of(a.ident(), new Stats(1, DataTypes.INTEGER.fixedSize(), Map.of())));
 
-        var memo = new Memo(source);
+        var memo = new Memo(source, ids);
         PlanStats planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         var result = planStats.get(source);
         assertThat(result.numDocs()).isEqualTo(1L);
@@ -95,13 +99,13 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         DocTableInfo a = e.resolveTableInfo("a");
 
         var x = e.asSymbol("x");
-        var source = new Collect(new DocTableRelation(a), List.of(x), WhereClause.MATCH_ALL);
-        var groupReference = new GroupReference(1, source.outputs(), Set.of());
+        var source = new Collect(1, new DocTableRelation(a), List.of(x), WhereClause.MATCH_ALL);
+        var groupReference = new GroupReference(2, 1, source.outputs(), Set.of());
 
         TableStats tableStats = new TableStats();
         tableStats.updateTableStats(Map.of(a.ident(), new Stats(1, DataTypes.INTEGER.fixedSize(), Map.of())));
 
-        var memo = new Memo(source);
+        var memo = new Memo(source, ids);
         PlanStats planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         var result = planStats.get(groupReference);
         assertThat(result.numDocs()).isEqualTo(1L);
@@ -117,14 +121,14 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         DocTableInfo a = e.resolveTableInfo("a");
 
         var x = e.asSymbol("x");
-        var source = new Collect(new DocTableRelation(a), List.of(x), WhereClause.MATCH_ALL);
+        var source = new Collect(1, new DocTableRelation(a), List.of(x), WhereClause.MATCH_ALL);
 
         TableStats tableStats = new TableStats();
         tableStats.updateTableStats(Map.of(a.ident(), new Stats(10L, 1, Map.of())));
 
-        var limit = new Limit(source, Literal.of(5), Literal.of(0));
+        var limit = new Limit(2, source, Literal.of(5), Literal.of(0));
 
-        var memo = new Memo(limit);
+        var memo = new Memo(limit, ids);
         PlanStats planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         var result = planStats.get(limit);
         assertThat(result.numDocs()).isEqualTo(5L);
@@ -153,9 +157,9 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         var x = e.asSymbol("x");
         var y = e.asSymbol("x");
 
-        var lhs = new Collect(new DocTableRelation(aDoc), List.of(x), WhereClause.MATCH_ALL);
+        var lhs = new Collect(1, new DocTableRelation(aDoc), List.of(x), WhereClause.MATCH_ALL);
 
-        var rhs = new Collect(new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
+        var rhs = new Collect(2, new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
 
         TableStats tableStats = new TableStats();
         tableStats.updateTableStats(
@@ -165,9 +169,9 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
             )
         );
 
-        var union = new Union(lhs, rhs, List.of());
+        var union = new Union(3, lhs, rhs, List.of());
 
-        var memo = new Memo(union);
+        var memo = new Memo(union, ids);
         PlanStats planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         var result = planStats.get(union);
         assertThat(result.numDocs()).isEqualTo(10L);
@@ -188,8 +192,8 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         var y = e.asSymbol("y");
         var joinCondition = e.asSymbol("a.x = b.y");
 
-        var lhs = new Collect(new DocTableRelation(aDoc), List.of(x), WhereClause.MATCH_ALL);
-        var rhs = new Collect(new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
+        var lhs = new Collect(1, new DocTableRelation(aDoc), List.of(x), WhereClause.MATCH_ALL);
+        var rhs = new Collect(2, new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
 
         TableStats tableStats = new TableStats();
         Map<ColumnIdent, ColumnStats<?>> columnStats = Map.of(
@@ -219,9 +223,9 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
             )
         );
 
-        var hashjoin = new HashJoin(lhs, rhs, joinCondition);
+        var hashjoin = new HashJoin(3, lhs, rhs, joinCondition);
 
-        var memo = new Memo(hashjoin);
+        var memo = new Memo(hashjoin, ids);
         PlanStats planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         var result = planStats.get(hashjoin);
         assertThat(result.numDocs()).isEqualTo(1L);
@@ -242,8 +246,8 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         var y = e.asSymbol("y");
 
         DocTableRelation relation = new DocTableRelation(aDoc);
-        var lhs = new Collect(relation, List.of(x), WhereClause.MATCH_ALL);
-        var rhs = new Collect(new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
+        var lhs = new Collect(1, relation, List.of(x), WhereClause.MATCH_ALL);
+        var rhs = new Collect(2, new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
         ColumnStats<Integer> xStats = ColumnStats.fromSortedValues(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9), DataTypes.INTEGER, 0, 9);
         ColumnStats<Integer> yStats = ColumnStats.fromSortedValues(List.of(1), DataTypes.INTEGER, 0, 1);
 
@@ -255,10 +259,10 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
             )
         );
 
-        var nestedLoopJoin = new NestedLoopJoin(
+        var nestedLoopJoin = new NestedLoopJoin(3,
             lhs, rhs, JoinType.INNER, Literal.BOOLEAN_TRUE, false, relation, false, false, false, false);
 
-        var memo = new Memo(nestedLoopJoin);
+        var memo = new Memo(nestedLoopJoin, ids);
         PlanStats planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         var result = planStats.get(nestedLoopJoin);
         // lhs is the larger table which 9 entries, so the join will at max emit 9 entries
@@ -266,16 +270,16 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
         assertThat(result.sizeInBytes()).isEqualTo(288L);
 
         var joinCondition = e.asSymbol("x = y");
-        nestedLoopJoin = new NestedLoopJoin(
+        nestedLoopJoin = new NestedLoopJoin(4,
             lhs, rhs, JoinType.INNER, joinCondition, false, relation, false, false, false, false);
         result = planStats.get(nestedLoopJoin);
         assertThat(result.numDocs()).isEqualTo(1L);
         assertThat(result.sizeInBytes()).isEqualTo(32L);
 
-        nestedLoopJoin = new NestedLoopJoin(
+        nestedLoopJoin = new NestedLoopJoin(5,
             lhs, rhs, JoinType.CROSS, x, false, relation, false, false, false, false);
 
-        memo = new Memo(nestedLoopJoin);
+        memo = new Memo(nestedLoopJoin, ids);
         planStats = new PlanStats(nodeContext, txnCtx, tableStats, memo);
         result = planStats.get(nestedLoopJoin);
         assertThat(result.numDocs()).isEqualTo(18L);
@@ -289,8 +293,8 @@ public class PlanStatsTest extends CrateDummyClusterServiceUnitTest {
             .build();
         DocTableInfo tbl = e.resolveTableInfo("tbl");
         Symbol x = e.asSymbol("x");
-        Collect source = new Collect(new DocTableRelation(tbl), List.of(x), WhereClause.MATCH_ALL);
-        Filter filter = new Filter(source, e.asSymbol("x = 10"));
+        Collect source = new Collect(1, new DocTableRelation(tbl), List.of(x), WhereClause.MATCH_ALL);
+        Filter filter = new Filter(2, source, e.asSymbol("x = 10"));
 
         TableStats tableStats = new TableStats();
         Map<ColumnIdent, ColumnStats<?>> columnStats = Map.of(

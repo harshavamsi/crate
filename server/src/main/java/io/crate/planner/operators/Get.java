@@ -65,22 +65,30 @@ import io.crate.planner.node.dql.Collect;
 
 public class Get implements LogicalPlan {
 
+    private final int id;
     final DocTableRelation tableRelation;
     final DocKeys docKeys;
     final Symbol query;
     private final List<Symbol> outputs;
     private final boolean queryHasPkSymbolsOnly;
 
-    public Get(DocTableRelation table,
+    public Get(int id,
+               DocTableRelation table,
                DocKeys docKeys,
                Symbol query,
                List<Symbol> outputs,
                boolean queryHasPkSymbolsOnly) {
+
+        this.id = id;
         this.tableRelation = table;
         this.docKeys = docKeys;
         this.query = query;
         this.outputs = outputs;
         this.queryHasPkSymbolsOnly = queryHasPkSymbolsOnly;
+    }
+
+    public int id() {
+        return id;
     }
 
     @Override
@@ -231,7 +239,7 @@ public class Get implements LogicalPlan {
             }
         }
         if (excludedAny) {
-            return new Get(tableRelation, docKeys, query, newOutputs, queryHasPkSymbolsOnly);
+            return new Get(id, tableRelation, docKeys, query, newOutputs, queryHasPkSymbolsOnly);
         }
         return this;
     }

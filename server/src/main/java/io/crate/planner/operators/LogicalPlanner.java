@@ -109,7 +109,7 @@ import io.crate.planner.optimizer.rule.ReorderHashJoin;
 import io.crate.planner.optimizer.rule.ReorderNestedLoopJoin;
 import io.crate.planner.optimizer.rule.RewriteFilterOnOuterJoinToInnerJoin;
 import io.crate.planner.optimizer.rule.RewriteGroupByKeysLimitToLimitDistinct;
-import io.crate.planner.optimizer.rule.RewriteNestedLoopJoinToHashJoin;
+import io.crate.planner.optimizer.rule.RewriteJoinPlan;
 import io.crate.planner.optimizer.rule.RewriteToQueryThenFetch;
 import io.crate.types.DataTypes;
 
@@ -151,7 +151,7 @@ public class LogicalPlanner {
         new OptimizeCollectWhereClauseAccess(),
         new RewriteGroupByKeysLimitToLimitDistinct(),
         new MoveConstantJoinConditionsBeneathNestedLoop(),
-        new RewriteNestedLoopJoinToHashJoin()
+        new RewriteJoinPlan()
     );
 
     public static final List<Rule<?>> JOIN_ORDER_OPTIMIZER_RULES = List.of(
@@ -301,6 +301,9 @@ public class LogicalPlanner {
         LogicalPlan logicalPlan = relation.accept(planBuilder, relation.outputs());
         LogicalPlan optimizedPlan = optimizer.optimize(logicalPlan, plannerContext.planStats(), coordinatorTxnCtx, plannerContext::nextLogicalPlanId);
         optimizedPlan = joinOrderOptimizer.optimize(optimizedPlan, plannerContext.planStats(), coordinatorTxnCtx, plannerContext::nextLogicalPlanId);
+        if (false == logicalPlan.outputs().equals(optimizedPlan.outputs())) {
+            System.out.println("optimizedPlan = " + optimizedPlan);
+        }
         assert logicalPlan.outputs().equals(optimizedPlan.outputs()) : "Optimized plan must have the same outputs as original plan";
         LogicalPlan prunedPlan = optimizedPlan.pruneOutputsExcept(relation.outputs());
         assert prunedPlan.outputs().equals(optimizedPlan.outputs()) : "Pruned plan must have the same outputs as original plan";

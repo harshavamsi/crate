@@ -23,7 +23,6 @@ package io.crate.planner.optimizer.rule;
 
 import io.crate.metadata.NodeContext;
 import io.crate.metadata.TransactionContext;
-import io.crate.planner.PlannerContext;
 import io.crate.planner.operators.JoinPlan;
 import io.crate.planner.optimizer.costs.PlanStats;
 import io.crate.planner.operators.Filter;

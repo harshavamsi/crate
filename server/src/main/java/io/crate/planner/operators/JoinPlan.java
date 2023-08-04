@@ -21,79 +21,103 @@
 
 package io.crate.planner.operators;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.jetbrains.annotations.Nullable;
 
-import io.crate.execution.dsl.phases.MergePhase;
-import io.crate.execution.dsl.projection.Projection;
+import io.crate.analyze.OrderBy;
+import io.crate.common.collections.Lists2;
+import io.crate.data.Row;
 import io.crate.execution.dsl.projection.builder.ProjectionBuilder;
 import io.crate.expression.symbol.Symbol;
+import io.crate.expression.symbol.SymbolVisitors;
+import io.crate.expression.symbol.format.Style;
+import io.crate.planner.DependencyCarrier;
+import io.crate.planner.ExecutionPlan;
 import io.crate.planner.PlannerContext;
-import io.crate.planner.ResultDescription;
-import io.crate.planner.distribution.DistributionInfo;
 import io.crate.sql.tree.JoinType;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+public class JoinPlan extends AbstractJoinPlan {
 
-public abstract class JoinPlan implements LogicalPlan {
-
-    protected final LogicalPlan lhs;
-    protected final LogicalPlan rhs;
-    @Nullable
-    protected final Symbol joinCondition;
-    protected final JoinType joinType;
-
-
-    protected JoinPlan(LogicalPlan lhs, LogicalPlan rhs, @Nullable Symbol joinCondition, JoinType joinType) {
-        this.lhs = lhs;
-        this.rhs = rhs;
-        this.joinCondition = joinCondition;
-        this.joinType = joinType;
+    public JoinPlan(int id,
+                    LogicalPlan lhs,
+                    LogicalPlan rhs,
+                    @Nullable Symbol joinCondition,
+                    JoinType joinType) {
+        super(id, lhs, rhs, joinCondition, joinType);
     }
 
-    public LogicalPlan lhs() {
-        return lhs;
+    @Override
+    public ExecutionPlan build(DependencyCarrier dependencyCarrier,
+                               PlannerContext plannerContext,
+                               Set<PlanHint> planHints,
+                               ProjectionBuilder projectionBuilder,
+                               int limit,
+                               int offset,
+                               @Nullable OrderBy order,
+                               @Nullable Integer pageSizeHint,
+                               Row params,
+                               SubQueryResults subQueryResults) {
+        throw new UnsupportedOperationException("JoinPlan can not be build, convert to Hash-join/NestedLoop Join instead");
     }
 
-    public LogicalPlan rhs() {
-        return rhs;
+    @Override
+    public <C, R> R accept(LogicalPlanVisitor<C, R> visitor, C context) {
+        return visitor.visitJoinPlan(this, context);
     }
 
-    @Nullable
-    public Symbol joinCondition() {
-        return joinCondition;
-    }
-
-    public JoinType joinType() {
-        return joinType;
-    }
-
-
-    protected static MergePhase buildMergePhaseForJoin(PlannerContext plannerContext,
-                                             ResultDescription resultDescription,
-                                             Collection<String> executionNodes) {
-        List<Projection> projections = Collections.emptyList();
-        if (resultDescription.hasRemainingLimitOrOffset()) {
-            projections = Collections.singletonList(ProjectionBuilder.limitAndOffsetOrEvalIfNeeded(
-                resultDescription.limit(),
-                resultDescription.offset(),
-                resultDescription.numOutputs(),
-                resultDescription.streamOutputs()
-            ));
+    @Override
+    public LogicalPlan pruneOutputsExcept(Collection<Symbol> outputsToKeep) {
+        LinkedHashSet<Symbol> lhsToKeep = new LinkedHashSet<>();
+        LinkedHashSet<Symbol> rhsToKeep = new LinkedHashSet<>();
+        for (Symbol outputToKeep : outputsToKeep) {
+            SymbolVisitors.intersection(outputToKeep, lhs.outputs(), lhsToKeep::add);
+            SymbolVisitors.intersection(outputToKeep, rhs.outputs(), rhsToKeep::add);
         }
+        if (joinCondition != null) {
+            SymbolVisitors.intersection(joinCondition, lhs.outputs(), lhsToKeep::add);
+            SymbolVisitors.intersection(joinCondition, rhs.outputs(), rhsToKeep::add);
+        }
+        LogicalPlan newLhs = lhs.pruneOutputsExcept(lhsToKeep);
+        LogicalPlan newRhs = rhs.pruneOutputsExcept(rhsToKeep);
+        if (newLhs == lhs && newRhs == rhs) {
+            return this;
+        }
+        return new JoinPlan(
+            id,
+            newLhs,
+            newRhs,
+            joinCondition,
+            joinType
+        );
+    }
 
-        return new MergePhase(
-            plannerContext.jobId(),
-            plannerContext.nextExecutionPhaseId(),
-            "join-merge",
-            resultDescription.nodeIds().size(),
-            1,
-            executionNodes,
-            resultDescription.streamOutputs(),
-            projections,
-            DistributionInfo.DEFAULT_SAME_NODE,
-            resultDescription.orderBy()
+    @Override
+    public void print(PrintContext printContext) {
+        printContext
+            .text("JoinPlan[")
+            .text(joinType.toString());
+        if (joinCondition != null) {
+            printContext
+                .text(" | ")
+                .text(joinCondition.toString(Style.QUALIFIED));
+        }
+        printContext.text("]");
+        printStats(printContext);
+        printContext.nest(Lists2.map(sources(), x -> x::print));
+    }
+
+    @Override
+    public LogicalPlan replaceSources(List<LogicalPlan> sources) {
+        return new JoinPlan(
+            id,
+            sources.get(0),
+            sources.get(1),
+            joinCondition,
+            joinType
         );
     }
 }

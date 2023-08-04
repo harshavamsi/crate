@@ -41,7 +41,6 @@ import io.crate.analyze.relations.AnalyzedRelation;
 import io.crate.analyze.relations.DocTableRelation;
 import io.crate.common.collections.Lists2;
 import io.crate.common.collections.Maps;
-import io.crate.common.collections.Sets;
 import io.crate.common.collections.Tuple;
 import io.crate.data.Row;
 import io.crate.execution.dsl.phases.MergePhase;
@@ -54,7 +53,6 @@ import io.crate.expression.symbol.SelectSymbol;
 import io.crate.expression.symbol.Symbol;
 import io.crate.expression.symbol.SymbolVisitors;
 import io.crate.expression.symbol.Symbols;
-import io.crate.metadata.RelationName;
 import io.crate.planner.DependencyCarrier;
 import io.crate.planner.ExecutionPlan;
 import io.crate.planner.PlannerContext;
@@ -64,15 +62,15 @@ import io.crate.planner.distribution.DistributionInfo;
 import io.crate.planner.node.dql.join.Join;
 import io.crate.sql.tree.JoinType;
 
-public class NestedLoopJoin extends JoinPlan {
+public class NestedLoopJoin extends AbstractJoinPlan {
 
-    private final int id;
+    @Nullable
     private final AnalyzedRelation topMostLeftRelation;
     private final boolean isFiltered;
-    private final List<Symbol> outputs;
     private boolean orderByWasPushedDown = false;
     private boolean rewriteFilterOnOuterJoinToInnerJoinDone = false;
     private final boolean joinConditionOptimised;
+    // this can be removed
     private boolean rewriteNestedLoopJoinToHashJoinDone = false;
 
     NestedLoopJoin(int id,
@@ -83,14 +81,8 @@ public class NestedLoopJoin extends JoinPlan {
                    boolean isFiltered,
                    AnalyzedRelation topMostLeftRelation,
                    boolean joinConditionOptimised) {
-        super(lhs, rhs, joinCondition, joinType);
-        this.id = id;
+        super(id, lhs, rhs, joinCondition, joinType);
         this.isFiltered = isFiltered || joinCondition != null;
-        if (joinType == JoinType.SEMI) {
-            this.outputs = lhs.outputs();
-        } else {
-            this.outputs = Lists2.concat(lhs.outputs(), rhs.outputs());
-        }
         this.topMostLeftRelation = topMostLeftRelation;
         this.joinConditionOptimised = joinConditionOptimised;
     }
@@ -112,10 +104,7 @@ public class NestedLoopJoin extends JoinPlan {
         this.rewriteNestedLoopJoinToHashJoinDone = rewriteEquiJoinToHashJoinDone;
     }
 
-    @Override
-    public Set<RelationName> getRelationNames() {
-        return Sets.union(lhs.getRelationNames(), rhs.getRelationNames());
-    }
+
 
     public boolean isRewriteNestedLoopJoinToHashJoinDone() {
         return rewriteNestedLoopJoinToHashJoinDone;
@@ -133,6 +122,7 @@ public class NestedLoopJoin extends JoinPlan {
         return isFiltered;
     }
 
+    @Nullable
     public AnalyzedRelation topMostLeftRelation() {
         return topMostLeftRelation;
     }
@@ -213,7 +203,7 @@ public class NestedLoopJoin extends JoinPlan {
             plannerContext.jobId(),
             plannerContext.nextExecutionPhaseId(),
             isDistributed ? "distributed-nested-loop" : "nested-loop",
-            Collections.singletonList(createJoinProjection(outputs, joinOutputs)),
+            Collections.singletonList(createJoinProjection(outputs(), joinOutputs)),
             joinExecutionNodesAndMergePhases.v2().get(0),
             joinExecutionNodesAndMergePhases.v2().get(1),
             leftLogicalPlan.outputs().size(),
@@ -236,14 +226,9 @@ public class NestedLoopJoin extends JoinPlan {
             NO_LIMIT,
             0,
             NO_LIMIT,
-            outputs.size(),
+            outputs().size(),
             orderByFromLeft
         );
-    }
-
-    @Override
-    public List<Symbol> outputs() {
-        return outputs;
     }
 
     @Override
@@ -271,11 +256,6 @@ public class NestedLoopJoin extends JoinPlan {
             joinConditionOptimised,
             rewriteNestedLoopJoinToHashJoinDone
         );
-    }
-
-    @Override
-    public int id() {
-        return id;
     }
 
     @Override
@@ -444,8 +424,8 @@ public class NestedLoopJoin extends JoinPlan {
     }
 
     private static boolean isMergePhaseNeeded(Collection<String> executionNodes,
-                                             ResultDescription resultDescription,
-                                             boolean isDistributed) {
+                                              ResultDescription resultDescription,
+                                              boolean isDistributed) {
         return isDistributed ||
                resultDescription.hasRemainingLimitOrOffset() ||
                !Lists2.equals(resultDescription.nodeIds(), executionNodes);
@@ -454,12 +434,12 @@ public class NestedLoopJoin extends JoinPlan {
     @Override
     public String toString() {
         return "NestedLoopJoin{" +
-            "joinCondition=" + joinCondition +
-            ", joinType=" + joinType +
-            ", isFiltered=" + isFiltered +
-            ", lhs=" + lhs +
-            ", rhs=" + rhs +
-            ", outputs=" + outputs +
-            '}';
+               "joinCondition=" + joinCondition +
+               ", joinType=" + joinType +
+               ", isFiltered=" + isFiltered +
+               ", lhs=" + lhs +
+               ", rhs=" + rhs +
+               ", outputs=" + outputs() +
+               '}';
     }
 }

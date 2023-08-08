@@ -47,7 +47,9 @@ import io.crate.metadata.RelationName;
 import io.crate.statistics.Stats;
 import io.crate.statistics.TableStats;
 import io.crate.testing.Asserts;
+import io.crate.testing.SQLResponse;
 import io.crate.testing.UseHashJoins;
+import io.crate.testing.UseJdbc;
 import io.crate.testing.UseRandomizedOptimizerRules;
 import io.crate.testing.UseRandomizedSchema;
 import io.crate.types.DataTypes;
@@ -1524,5 +1526,28 @@ public class JoinIntegrationTest extends IntegTestCase {
             "              └ Collect[doc.tt1 | [_fetchid, b] | true]"
         );
         assertThat(execute(stmt)).hasRowCount(51);
+    }
+
+    @Test
+    @UseRandomizedSchema(random = false)
+    @UseRandomizedOptimizerRules(0)
+    @UseJdbc(0)
+    @UseHashJoins(1)
+    public void test_eliminate_cross_join() throws Exception {
+        execute("create table t1 (x int)");
+        execute("create table t2 (y int)");
+        execute("create table t3 (z int)");
+
+        String stmt = "SELECT * FROM t1, t2, t3 WHERE t1.x = t3.z AND t3.z = t2.y;";
+        execute("explain (costs false) " + stmt);
+
+        assertThat(response).hasRows(
+            "Eval[x, y, z]\n" +
+            "  └ HashJoin[(z = y)]\n" +
+            "    ├ HashJoin[(x = z)]\n" +
+            "    │  ├ Collect[doc.t1 | [x] | true]\n" +
+            "    │  └ Collect[doc.t3 | [z] | true]\n" +
+            "    └ Collect[doc.t2 | [y] | true]"
+        );
     }
 }

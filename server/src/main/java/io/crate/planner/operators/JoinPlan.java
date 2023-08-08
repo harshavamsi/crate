@@ -45,17 +45,20 @@ public class JoinPlan extends AbstractJoinPlan {
 
     private final AnalyzedRelation leftRelation;
     private final boolean isFiltered;
+    private final boolean isReordered;
 
     public JoinPlan(int id,
                     LogicalPlan lhs,
                     LogicalPlan rhs,
-                    @Nullable Symbol joinCondition,
                     JoinType joinType,
-                    AnalyzedRelation leftRelation,
-                    boolean isFiltered) {
+                    @Nullable Symbol joinCondition,
+                    boolean isFiltered,
+                    @Nullable AnalyzedRelation leftRelation,
+                    boolean isReordered) {
         super(id, lhs, rhs, joinCondition, joinType);
         this.leftRelation = leftRelation;
         this.isFiltered = isFiltered;
+        this.isReordered = isReordered;
     }
 
     public AnalyzedRelation leftRelation() {
@@ -64,6 +67,10 @@ public class JoinPlan extends AbstractJoinPlan {
 
     public boolean isFiltered() {
         return isFiltered;
+    }
+
+    public boolean isReordered() {
+        return isReordered;
     }
 
     @Override
@@ -106,10 +113,11 @@ public class JoinPlan extends AbstractJoinPlan {
             id,
             newLhs,
             newRhs,
-            joinCondition,
             joinType,
+            joinCondition,
+            isFiltered,
             leftRelation,
-            isFiltered
+            isReordered
         );
     }
 
@@ -134,10 +142,11 @@ public class JoinPlan extends AbstractJoinPlan {
             id,
             sources.get(0),
             sources.get(1),
-            joinCondition,
             joinType,
+            joinCondition,
+            isFiltered,
             leftRelation,
-            isFiltered
+            isReordered
         );
     }
 }

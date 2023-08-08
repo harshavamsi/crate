@@ -74,26 +74,8 @@ public class JoinPlanBuilder {
         }
         Map<Set<RelationName>, Symbol> queryParts = QuerySplitter.split(whereClause);
         List<JoinPair> allJoinPairs = convertImplicitJoinConditionsToJoinPairs(joinPairs, queryParts);
-        boolean optimizeOrder = true;
-        for (var joinPair : allJoinPairs) {
-            if (hasAdditionalDependencies(joinPair)) {
-                optimizeOrder = false;
-                break;
-            }
-        }
         LinkedHashMap<Set<RelationName>, JoinPair> joinPairsByRelations = buildRelationsToJoinPairsMap(allJoinPairs);
-        Iterator<RelationName> it;
-        if (optimizeOrder) {
-            Collection<RelationName> orderedRelationNames = JoinOrdering.getOrderedRelationNames(
-                Lists2.map(from, AnalyzedRelation::relationName),
-                joinPairsByRelations.keySet(),
-                queryParts.keySet()
-            );
-            it = orderedRelationNames.iterator();
-        } else {
-            it = Lists2.map(from, AnalyzedRelation::relationName).iterator();
-        }
-
+        Iterator<RelationName> it = Lists2.map(from, AnalyzedRelation::relationName).iterator();
         final RelationName lhsName = it.next();
         final RelationName rhsName = it.next();
         Set<RelationName> joinNames = new LinkedHashSet<>();
@@ -123,7 +105,7 @@ public class JoinPlanBuilder {
 
         boolean isFiltered = validWhereConditions.symbolType().isValueSymbol() == false;
 
-        LogicalPlan joinPlan = new NestedLoopJoin(
+        LogicalPlan joinPlan = new JoinPlan(
             ids.getAsInt(),
             plan.apply(lhs),
             plan.apply(rhs),
@@ -243,7 +225,7 @@ public class JoinPlanBuilder {
                 .filter(Objects::nonNull).iterator()
         );
         boolean isFiltered = query.symbolType().isValueSymbol() == false;
-        var joinPlan = new NestedLoopJoin(
+        var joinPlan = new JoinPlan(
             ids.getAsInt(),
             source,
             nextPlan,

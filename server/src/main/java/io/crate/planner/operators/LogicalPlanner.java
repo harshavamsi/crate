@@ -83,6 +83,7 @@ import io.crate.planner.optimizer.Rule;
 import io.crate.planner.optimizer.costs.PlanStats;
 import io.crate.planner.optimizer.iterative.IterativeOptimizer;
 import io.crate.planner.optimizer.rule.DeduplicateOrder;
+import io.crate.planner.optimizer.rule.ReorderJoinPlan;
 import io.crate.planner.optimizer.rule.MergeAggregateAndCollectToCount;
 import io.crate.planner.optimizer.rule.MergeAggregateRenameAndCollectToCount;
 import io.crate.planner.optimizer.rule.MergeFilterAndCollect;
@@ -153,7 +154,8 @@ public class LogicalPlanner {
         new RewriteGroupByKeysLimitToLimitDistinct(),
         new MoveConstantJoinConditionsBeneathNestedLoop(),
         new RewriteJoinPlan(),
-        new RewriteNestedLoopJoinToHashJoin()
+        new RewriteNestedLoopJoinToHashJoin(),
+        new ReorderJoinPlan()
     );
 
     public static final List<Rule<?>> JOIN_ORDER_OPTIMIZER_RULES = List.of(
@@ -301,9 +303,11 @@ public class LogicalPlanner {
             plannerContext::nextLogicalPlanId
         );
         LogicalPlan logicalPlan = relation.accept(planBuilder, relation.outputs());
+        var logicalPlanOutput = logicalPlan.outputs();
         LogicalPlan optimizedPlan = optimizer.optimize(logicalPlan, plannerContext.planStats(), coordinatorTxnCtx, plannerContext::nextLogicalPlanId);
         optimizedPlan = joinOrderOptimizer.optimize(optimizedPlan, plannerContext.planStats(), coordinatorTxnCtx, plannerContext::nextLogicalPlanId);
-        if (false == logicalPlan.outputs().equals(optimizedPlan.outputs())) {
+        var optimizedPlanOutput = optimizedPlan.outputs();
+        if (false == logicalPlanOutput.equals(optimizedPlanOutput)) {
             System.out.println("optimizedPlan = " + optimizedPlan);
         }
         assert logicalPlan.outputs().equals(optimizedPlan.outputs()) : "Optimized plan must have the same outputs as original plan";

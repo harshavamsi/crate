@@ -40,7 +40,7 @@ import io.crate.planner.optimizer.matcher.Pattern;
 
 public class RewriteJoinPlan implements Rule<JoinPlan> {
 
-    private final Pattern<JoinPlan> pattern = typeOf(JoinPlan.class);
+    private final Pattern<JoinPlan> pattern = typeOf(JoinPlan.class).with(j -> j.isReordered() == true);
 
     @Override
     public Pattern<JoinPlan> pattern() {

@@ -68,36 +68,26 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                              IntSupplier ids,
                              Function<LogicalPlan, LogicalPlan> resolvePlan) {
         var joinGraph = Graph.create(plan, resolvePlan);
-        if (joinGraph.size() < 3) {
-            return new JoinPlan(
-                plan.id(),
-                plan.lhs(),
-                plan.rhs(),
-                plan.joinType(),
-                plan.joinCondition(),
-                plan.isFiltered(),
-                plan.leftRelation(),
-                true
-            );
+        if (joinGraph.size() > 3) {
+            var joinOrder = eliminateCrossJoins(joinGraph);
+            if (isOriginalOrder(joinOrder) == false) {
+                var result = buildJoinPlan(joinGraph, joinOrder, ids);
+                return Eval.create(
+                    ids.getAsInt(),
+                    result,
+                    plan.outputs()
+                );
+            }
         }
-        var joinOrder = eliminateCrossJoins(joinGraph);
-        if (isOriginalOrder(joinOrder)) {
-            return new JoinPlan(
-                plan.id(),
-                plan.lhs(),
-                plan.rhs(),
-                plan.joinType(),
-                plan.joinCondition(),
-                plan.isFiltered(),
-                plan.leftRelation(),
-                true
-            );
-        }
-        var result = buildJoinPlan(joinGraph, joinOrder, ids);
-        return Eval.create(
-            ids.getAsInt(),
-            result,
-            plan.outputs()
+        return new JoinPlan(
+            plan.id(),
+            plan.lhs(),
+            plan.rhs(),
+            plan.joinType(),
+            plan.joinCondition(),
+            plan.isFiltered(),
+            plan.leftRelation(),
+            true
         );
     }
 
@@ -164,8 +154,7 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                     criteria.add(condition);
                 }
             }
-            JoinType joinType = criteria.isEmpty() ?  JoinType.CROSS : JoinType.INNER;
-
+            var joinType = criteria.isEmpty() ?  JoinType.CROSS : JoinType.INNER;
             result = new JoinPlan(
                 ids.getAsInt(),
                 result,

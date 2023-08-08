@@ -69,7 +69,7 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                              Function<LogicalPlan, LogicalPlan> resolvePlan) {
         var joinGraph = Graph.create(plan, resolvePlan);
         if (joinGraph.size() < 3) {
-            new JoinPlan(
+            return new JoinPlan(
                 plan.id(),
                 plan.lhs(),
                 plan.rhs(),
@@ -82,7 +82,7 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
         }
         var joinOrder = eliminateCrossJoins(joinGraph);
         if (isOriginalOrder(joinOrder)) {
-            new JoinPlan(
+            return new JoinPlan(
                 plan.id(),
                 plan.lhs(),
                 plan.rhs(),

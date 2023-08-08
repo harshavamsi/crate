@@ -191,6 +191,9 @@ public class Graph {
         }
 
         public Graph visitJoin(AbstractJoinPlan joinPlan, Map<Symbol, LogicalPlan> context) {
+            if (joinPlan.joinType() != JoinType.INNER) {
+                return visitPlan(joinPlan, context);
+            }
             var left = joinPlan.lhs().accept(this, context);
             var right = joinPlan.rhs().accept(this, context);
 

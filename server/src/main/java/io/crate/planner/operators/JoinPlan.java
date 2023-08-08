@@ -29,6 +29,7 @@ import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 import io.crate.analyze.OrderBy;
+import io.crate.analyze.relations.AnalyzedRelation;
 import io.crate.common.collections.Lists2;
 import io.crate.data.Row;
 import io.crate.execution.dsl.projection.builder.ProjectionBuilder;
@@ -42,12 +43,27 @@ import io.crate.sql.tree.JoinType;
 
 public class JoinPlan extends AbstractJoinPlan {
 
+    private final AnalyzedRelation leftRelation;
+    private final boolean isFiltered;
+
     public JoinPlan(int id,
                     LogicalPlan lhs,
                     LogicalPlan rhs,
                     @Nullable Symbol joinCondition,
-                    JoinType joinType) {
+                    JoinType joinType,
+                    AnalyzedRelation leftRelation,
+                    boolean isFiltered) {
         super(id, lhs, rhs, joinCondition, joinType);
+        this.leftRelation = leftRelation;
+        this.isFiltered = isFiltered;
+    }
+
+    public AnalyzedRelation leftRelation() {
+        return leftRelation;
+    }
+
+    public boolean isFiltered() {
+        return isFiltered;
     }
 
     @Override
@@ -91,7 +107,9 @@ public class JoinPlan extends AbstractJoinPlan {
             newLhs,
             newRhs,
             joinCondition,
-            joinType
+            joinType,
+            leftRelation,
+            isFiltered
         );
     }
 
@@ -117,7 +135,9 @@ public class JoinPlan extends AbstractJoinPlan {
             sources.get(0),
             sources.get(1),
             joinCondition,
-            joinType
+            joinType,
+            leftRelation,
+            isFiltered
         );
     }
 }

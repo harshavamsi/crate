@@ -30,7 +30,6 @@ import io.crate.metadata.NodeContext;
 import io.crate.metadata.TransactionContext;
 import io.crate.planner.operators.EquiJoinDetector;
 import io.crate.planner.operators.HashJoin;
-import io.crate.planner.operators.JoinPlan;
 import io.crate.planner.operators.LogicalPlan;
 import io.crate.planner.operators.NestedLoopJoin;
 import io.crate.planner.optimizer.Rule;
@@ -38,47 +37,47 @@ import io.crate.planner.optimizer.costs.PlanStats;
 import io.crate.planner.optimizer.matcher.Captures;
 import io.crate.planner.optimizer.matcher.Pattern;
 
-public class RewriteJoinPlan implements Rule<JoinPlan> {
+public class RewriteNestedLoopJoinToHashJoin implements Rule<NestedLoopJoin> {
 
-    private final Pattern<JoinPlan> pattern = typeOf(JoinPlan.class);
+    private final Pattern<NestedLoopJoin> pattern = typeOf(NestedLoopJoin.class)
+        .with(nl -> nl.isRewriteNestedLoopJoinToHashJoinDone() == false &&
+                    nl.orderByWasPushedDown() == false);
 
     @Override
-    public Pattern<JoinPlan> pattern() {
+    public Pattern<NestedLoopJoin> pattern() {
         return pattern;
     }
 
     @Override
-    public LogicalPlan apply(JoinPlan join,
+    public LogicalPlan apply(NestedLoopJoin nl,
                              Captures captures,
                              PlanStats planStats,
                              TransactionContext txnCtx,
                              NodeContext nodeCtx,
                              IntSupplier ids,
                              Function<LogicalPlan, LogicalPlan> resolvePlan) {
-
         if (txnCtx.sessionSettings().hashJoinsEnabled() &&
-            EquiJoinDetector.isHashJoinPossible(join.joinType(), join.joinCondition())) {
+            EquiJoinDetector.isHashJoinPossible(nl.joinType(), nl.joinCondition())) {
             return new HashJoin(
                 ids.getAsInt(),
-                join.lhs(),
-                join.rhs(),
-                join.joinCondition()
+                nl.lhs(),
+                nl.rhs(),
+                nl.joinCondition()
             );
         } else {
             return new NestedLoopJoin(
-                ids.getAsInt(),
-                join.lhs(),
-                join.rhs(),
-                join.joinType(),
-                join.joinCondition(),
-                join.isFiltered(),
-                join.leftRelation(),
-                false,
-                false,
-                false,
-                false
+                nl.id(),
+                nl.lhs(),
+                nl.rhs(),
+                nl.joinType(),
+                nl.joinCondition(),
+                nl.isFiltered(),
+                nl.topMostLeftRelation(),
+                nl.orderByWasPushedDown(),
+                nl.isRewriteFilterOnOuterJoinToInnerJoinDone(),
+                nl.isJoinConditionOptimised(),
+                true
             );
         }
     }
-
 }

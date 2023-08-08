@@ -121,13 +121,17 @@ public class JoinPlanBuilder {
         AnalyzedRelation lhs = sources.get(lhsName);
         AnalyzedRelation rhs = sources.get(rhsName);
 
-        LogicalPlan joinPlan = new JoinPlan(
+        boolean isFiltered = validWhereConditions.symbolType().isValueSymbol() == false;
+
+        LogicalPlan joinPlan = new NestedLoopJoin(
             ids.getAsInt(),
             plan.apply(lhs),
             plan.apply(rhs),
+            joinType,
             validJoinConditions,
-            joinType
-        );
+            isFiltered,
+            lhs,
+            false);
 
         joinPlan = Filter.create(ids.getAsInt(), joinPlan, validWhereConditions);
         while (it.hasNext()) {
@@ -238,14 +242,16 @@ public class JoinPlanBuilder {
                 queryParts.remove(Collections.singleton(nextName)))
                 .filter(Objects::nonNull).iterator()
         );
-
-        var joinPlan = new JoinPlan(
+        boolean isFiltered = query.symbolType().isValueSymbol() == false;
+        var joinPlan = new NestedLoopJoin(
             ids.getAsInt(),
             source,
             nextPlan,
+            type,
             AndOperator.join(conditions, null),
-            type
-        );
+            isFiltered,
+            leftRelation,
+            false);
         return Filter.create(ids.getAsInt(), joinPlan, query);
     }
 

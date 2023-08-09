@@ -33,6 +33,7 @@ import java.util.function.Function;
 import org.jetbrains.annotations.Nullable;
 
 import io.crate.analyze.relations.QuerySplitter;
+import io.crate.common.collections.Sets;
 import io.crate.expression.operator.EqOperator;
 import io.crate.expression.symbol.Symbol;
 import io.crate.expression.symbol.format.Style;
@@ -71,13 +72,26 @@ public class Graph {
         newNodes.addAll(nodes);
         newNodes.addAll(other.nodes);
 
-        var newEdges = new HashMap<Integer, Set<Edge>>();
-        newEdges.putAll(edges);
-        newEdges.putAll(other.edges);
-        newEdges.putAll(moreEdges);
-
+        var newEdges = mergeMap(edges, other.edges);
+        newEdges = mergeMap(newEdges, moreEdges);
 
         return new Graph(root, newNodes, newEdges);
+    }
+
+    public static Map<Integer, Set<Edge>> mergeMap(Map<Integer, Set<Edge>> a,  Map<Integer, Set<Edge>> b) {
+        var copyOfB = new HashMap<>(b);
+        var result = new HashMap<Integer, Set<Edge>>();
+        for (var key : a.keySet()) {
+            Set<Edge> edges1 = a.get(key);
+            Set<Edge> edges2 = copyOfB.remove(key);
+            if (edges2 != null) {
+                result.put(key, Sets.union(edges1, edges2));
+            } else {
+                result.put(key, edges1);
+            }
+        }
+        result.putAll(copyOfB);
+        return result;
     }
 
     public List<LogicalPlan> nodes() {

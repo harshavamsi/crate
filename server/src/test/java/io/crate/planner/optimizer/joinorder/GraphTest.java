@@ -31,9 +31,11 @@ import org.junit.Test;
 
 import io.crate.analyze.WhereClause;
 import io.crate.analyze.relations.DocTableRelation;
+import io.crate.expression.symbol.Symbol;
 import io.crate.metadata.doc.DocTableInfo;
 import io.crate.planner.operators.Collect;
 import io.crate.planner.operators.HashJoin;
+import io.crate.sql.tree.JoinType;
 import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
 import io.crate.testing.SQLExecutor;
 
@@ -103,25 +105,27 @@ public class GraphTest extends CrateDummyClusterServiceUnitTest {
         var b = new Collect(2, new DocTableRelation(bDoc), List.of(y), WhereClause.MATCH_ALL);
         var c = new Collect(3, new DocTableRelation(cDoc), List.of(z), WhereClause.MATCH_ALL);
 
-        var firstJoin = new HashJoin(4, a, b, e.asSymbol("a.x = b.y"));
-        var secondJoin = new HashJoin(5, firstJoin, c, e.asSymbol("b.y = c.z"));
+        Symbol firstJoinCondition = e.asSymbol("a.x = b.y");
+        var firstJoin = new HashJoin(4, a, b, firstJoinCondition);
+        Symbol secondJoinCondition = e.asSymbol("b.y = c.z");
+        var secondJoin = new HashJoin(5, firstJoin, c, secondJoinCondition);
         Graph joinGraph = Graph.create(secondJoin, Function.identity());
         // [a]--[a.x = b.y]--[b]--[b.y = c.z]--[c]
         assertThat(joinGraph.nodes()).containsExactly(a, b, c);
 
         var edges = joinGraph.edges().get(a.id());
         assertThat(edges).hasSize(1);
-        var edge = getOnlyElement(edges);
         // `a.x = b.y` creates a edge from a to b
-        assertThat(edge.from().id()).isEqualTo(a.id());
-        assertThat(edge.to().id()).isEqualTo(b.id());
+        assertThat(edges).contains(
+            new Graph.Edge(a, x, b, y, JoinType.INNER, firstJoinCondition)
+        );
 
         // `b.y = c.z` creates a edge from b to c
         edges = joinGraph.edges().get(b.id());
-        assertThat(edges).hasSize(1);
-        edge = getOnlyElement(edges);
-        assertThat(edge.from().id()).isEqualTo(b.id());
-        assertThat(edge.to().id()).isEqualTo(c.id());
-
+        assertThat(edges).hasSize(2);
+        assertThat(edges).contains(
+            new Graph.Edge(a, x, b, y, JoinType.INNER, firstJoinCondition),
+            new Graph.Edge(b, y, c, z, JoinType.INNER, secondJoinCondition)
+        );
     }
 }

@@ -120,7 +120,7 @@ public class Memo {
         return extract(resolve(rootGroup));
     }
 
-    private LogicalPlan extract(LogicalPlan node) {
+    public LogicalPlan extract(LogicalPlan node) {
         return resolveGroupReferences(node, GroupReferenceResolver.from(this::resolve));
     }
 

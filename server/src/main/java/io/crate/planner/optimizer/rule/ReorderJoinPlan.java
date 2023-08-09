@@ -43,6 +43,7 @@ import io.crate.metadata.TransactionContext;
 import io.crate.planner.operators.Eval;
 import io.crate.planner.operators.JoinPlan;
 import io.crate.planner.operators.LogicalPlan;
+import io.crate.planner.operators.PrintContext;
 import io.crate.planner.optimizer.Rule;
 import io.crate.planner.optimizer.costs.PlanStats;
 import io.crate.planner.optimizer.joinorder.Graph;
@@ -67,9 +68,16 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                              NodeContext nodeCtx,
                              IntSupplier ids,
                              Function<LogicalPlan, LogicalPlan> resolvePlan) {
+        var foo = planStats.memo().extract(plan);
+        PrintContext printContext = new PrintContext(null);
+        foo.print(printContext);
+        System.out.println("------------------");
+        System.out.println("Before reordering");
+        System.out.println("------------------");
+        System.out.println(printContext.toString());
         var joinGraph = Graph.create(plan, resolvePlan);
-        if (joinGraph.size() > 3) {
-            var joinOrder = eliminateCrossJoins(joinGraph);
+        if (joinGraph.size() >= 3) {
+            var joinOrder = reorderJoins(joinGraph);
             if (isOriginalOrder(joinOrder) == false) {
                 var result = buildJoinPlan(joinGraph, joinOrder, ids);
                 return Eval.create(
@@ -94,7 +102,7 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
     /**
      * Basic cross-join elimination without a cost model
      */
-    public static List<Integer> eliminateCrossJoins(Graph graph) {
+    public static List<Integer> reorderJoins(Graph graph) {
         List<Integer> joinOrder = new ArrayList<>();
 
         Map<Integer, Integer> priorities = new HashMap<>();

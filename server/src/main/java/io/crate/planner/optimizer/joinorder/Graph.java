@@ -205,7 +205,7 @@ public class Graph {
         }
 
         public Graph visitJoin(AbstractJoinPlan joinPlan, Map<Symbol, LogicalPlan> context) {
-            if (joinPlan.joinType() != JoinType.INNER && joinPlan.joinType() != JoinType.CROSS ) {
+            if (joinPlan.joinType() != JoinType.INNER) {
                 return visitPlan(joinPlan, context);
             }
             var left = joinPlan.lhs().accept(this, context);
@@ -226,6 +226,9 @@ public class Graph {
                                 var toSymbol = f.arguments().get(1);
                                 var from = context.get(fromSymbol);
                                 var to = context.get(toSymbol);
+                                if (to == null) {
+                                    System.out.println("to = " + to);
+                                }
                                 var edge = new Edge(from, fromSymbol, to, toSymbol, joinPlan.joinType(), joinCondition);
                                 insertEdge(edges, edge);
                             }

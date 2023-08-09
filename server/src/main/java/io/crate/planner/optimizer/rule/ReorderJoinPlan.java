@@ -80,6 +80,12 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
             var joinOrder = reorderJoins(joinGraph);
             if (isOriginalOrder(joinOrder) == false) {
                 var result = buildJoinPlan(joinGraph, joinOrder, ids);
+                System.out.println("------------------");
+                System.out.println("After reordering");
+                System.out.println("------------------");
+                printContext = new PrintContext(null);
+                result.print(printContext);
+                System.out.println(printContext.toString());
                 return Eval.create(
                     ids.getAsInt(),
                     result,

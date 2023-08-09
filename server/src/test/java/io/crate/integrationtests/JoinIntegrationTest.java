@@ -1445,16 +1445,15 @@ public class JoinIntegrationTest extends IntegTestCase {
             """;
 
         execute("explain (costs false)" + stmt);
-//        assertThat(response.rows()[0][0]).isEqualTo(
-//            """
-//                Eval[x, x, x]
-//                  └ OrderBy[x ASC]
-//                    └ HashJoin[(x = x)]
-//                      ├ HashJoin[(x = x)]
-//                      │  ├ Collect[doc.j2 | [x] | true]
-//                      │  └ Collect[doc.j3 | [x] | true]
-//                      └ Collect[doc.j1 | [x] | true]"""
-//        );
+        assertThat(response.rows()[0][0]).isEqualTo(
+            """
+                OrderBy[x ASC]
+                  └ HashJoin[(x = x)]
+                    ├ HashJoin[(x = x)]
+                    │  ├ Collect[doc.j1 | [x] | true]
+                    │  └ Collect[doc.j2 | [x] | true]
+                    └ Collect[doc.j3 | [x] | true]"""
+        );
 
         execute(stmt);
         assertThat(response).hasRows("1| 1| 1",
@@ -1487,15 +1486,13 @@ public class JoinIntegrationTest extends IntegTestCase {
 
         execute("explain (costs false)" + stmt);
         assertThat(response.rows()[0][0]).isEqualTo(
-           "Eval[x, z, x]\n" +
-           "  └ OrderBy[x ASC]\n" +
-           "    └ HashJoin[(x = z)]\n" +
-           "      ├ HashJoin[(x = x)]\n" +
-           "      │  ├ Collect[doc.j2 | [x] | true]\n" +
-           "      │  └ Collect[doc.j1 | [x] | true]\n" +
-           "      └ Collect[doc.j3 | [z] | true]"
-
-        );
+            """
+                OrderBy[x ASC]
+                  └ HashJoin[(x = x)]
+                    ├ HashJoin[(x = z)]
+                    │  ├ Collect[doc.j2 | [x] | true]
+                    │  └ Collect[doc.j3 | [z] | true]
+                    └ Collect[doc.j1 | [x] | true]""");
 
         execute(stmt);
         assertThat(response).hasRows(

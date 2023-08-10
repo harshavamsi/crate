@@ -78,7 +78,7 @@ public class Graph {
         return new Graph(root, newNodes, newEdges);
     }
 
-    public static Map<Integer, Set<Edge>> mergeMap(Map<Integer, Set<Edge>> a,  Map<Integer, Set<Edge>> b) {
+    private static Map<Integer, Set<Edge>> mergeMap(Map<Integer, Set<Edge>> a,  Map<Integer, Set<Edge>> b) {
         var copyOfB = new HashMap<>(b);
         var result = new HashMap<Integer, Set<Edge>>();
         for (var key : a.keySet()) {
@@ -120,7 +120,7 @@ public class Graph {
         return nodesById.get(i);
     }
 
-    public Collection<Edge> getEdges(LogicalPlan node) {
+    public Set<Edge> getEdges(LogicalPlan node) {
         var result = edges.get(node.id());
         if (result == null) {
             return Set.of();

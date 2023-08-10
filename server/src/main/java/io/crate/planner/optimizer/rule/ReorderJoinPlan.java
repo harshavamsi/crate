@@ -25,6 +25,9 @@ import static io.crate.planner.optimizer.matcher.Pattern.typeOf;
 import static java.util.Comparator.comparing;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,20 +38,28 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 
+import io.crate.common.collections.Lists2;
 import io.crate.expression.operator.AndOperator;
 import io.crate.expression.operator.EqOperator;
 import io.crate.expression.symbol.Symbol;
 import io.crate.metadata.NodeContext;
 import io.crate.metadata.TransactionContext;
+import io.crate.planner.operators.Collect;
 import io.crate.planner.operators.Eval;
+import io.crate.planner.operators.HashJoin;
 import io.crate.planner.operators.JoinPlan;
 import io.crate.planner.operators.LogicalPlan;
+import io.crate.planner.operators.LogicalPlanVisitor;
+import io.crate.planner.operators.NestedLoopJoin;
 import io.crate.planner.operators.PrintContext;
+import io.crate.planner.operators.Rename;
 import io.crate.planner.optimizer.Rule;
 import io.crate.planner.optimizer.costs.PlanStats;
+import io.crate.planner.optimizer.iterative.GroupReference;
 import io.crate.planner.optimizer.joinorder.Graph;
 import io.crate.planner.optimizer.matcher.Captures;
 import io.crate.planner.optimizer.matcher.Pattern;
+import io.crate.signatures.antlr.TypeSignaturesParser;
 import io.crate.sql.tree.JoinType;
 
 public class ReorderJoinPlan implements Rule<JoinPlan> {
@@ -68,22 +79,21 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                              NodeContext nodeCtx,
                              IntSupplier ids,
                              Function<LogicalPlan, LogicalPlan> resolvePlan) {
-        var foo = planStats.memo().extract(plan);
-        PrintContext printContext = new PrintContext(null);
-        foo.print(printContext);
-        System.out.println("------------------");
-        System.out.println("Before reordering");
-        System.out.println("------------------");
-        System.out.println(printContext.toString());
+        var originalOrder = getOriginalOrder(resolvePlan, plan);
         var joinGraph = Graph.create(plan, resolvePlan);
         if (joinGraph.size() >= 3) {
             var joinOrder = reorderJoins(joinGraph);
-            if (isOriginalOrder(joinOrder) == false) {
+            if (originalOrder.equals(joinOrder) == false) {
+                var foo = planStats.memo().extract(plan);
+                PrintContext printContext = new PrintContext(null);
+                foo.print(printContext);
+                System.out.println("---------------------");
+                System.out.println("Rewrite JoinPlan from");
+                System.out.println("---------------------");
+                System.out.println(printContext.toString());
                 var result = buildJoinPlan(joinGraph, joinOrder, ids);
                 foo = planStats.memo().extract(result);
-                System.out.println("------------------");
-                System.out.println("After reordering");
-                System.out.println("------------------");
+                System.out.println();
                 printContext = new PrintContext(null);
                 foo.print(printContext);
                 System.out.println(printContext.toString());
@@ -159,17 +169,28 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
 
             var criteria = new ArrayList<Symbol>();
 
-            for (var edge : graph.getEdges(rightNode)) {
+            var edges = graph.getEdges(rightNode);
+            var sortedEdges = new ArrayList<>(edges);
+            Comparator<Graph.Edge> edgeComparator = (o1, o2) -> {
+               var result1 = Integer.compare(o1.from().id(), o2.from().id());
+               if (result1 != 0) {
+                   return result1;
+               }
+               return  Integer.compare(o1.to().id(), o2.to().id());
+            };
+            Collections.sort(sortedEdges,edgeComparator);
+            for (var edge : edges) {
                 // rebuild join conditions
                 LogicalPlan targetNode = edge.to();
-                if (alreadyJoinedNodes.contains(targetNode.id()) && alreadyJoinedNodes.contains(edge.from().id())) {
+                if (alreadyJoinedNodes.contains(targetNode.id()) &&
+                    alreadyJoinedNodes.contains(edge.from().id())) {
                     var fromVariable = edge.fromVariable();
                     var toVariable = edge.toVariable();
                     var condition = EqOperator.of(fromVariable, toVariable);
                     criteria.add(condition);
                 }
             }
-            var joinType = criteria.isEmpty() ?  JoinType.CROSS : JoinType.INNER;
+            var joinType = criteria.isEmpty() ? JoinType.CROSS : JoinType.INNER;
             result = new JoinPlan(
                 ids.getAsInt(),
                 result,
@@ -185,12 +206,43 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
         return result;
     }
 
-    private static boolean isOriginalOrder(List<Integer> joinOrder) {
-        for (int i = 0; i < joinOrder.size(); i++) {
-            if (joinOrder.get(i) != i) {
-                return false;
-            }
+    private static List<Integer> getOriginalOrder(Function<LogicalPlan, LogicalPlan> resolvePlan, LogicalPlan plan) {
+        var context = new ArrayList<Integer>();
+        var visitor = new Visitor(resolvePlan);
+        plan.accept(visitor, context);
+        return context;
+    }
+
+    private static class Visitor extends LogicalPlanVisitor<List<Integer>, Void> {
+
+        private final  Function<LogicalPlan, LogicalPlan> resolvePlan;
+
+        public Visitor(Function<LogicalPlan, LogicalPlan> resolvePlan) {
+            this.resolvePlan = resolvePlan;
         }
-        return true;
+
+        @Override
+        public Void visitPlan(LogicalPlan logicalPlan, List<Integer> context) {
+            Lists2.map(logicalPlan.sources(), x -> x.accept(this, context));
+            return null;
+        }
+
+        @Override
+        public Void visitGroupReference(GroupReference plan, List<Integer> context) {
+            resolvePlan.apply(plan).accept(this, context);
+            return null;
+        }
+
+        @Override
+        public Void visitRename(Rename rename, List<Integer> context) {
+            context.add(rename.id());
+            return null;
+        }
+
+        @Override
+        public Void visitCollect(Collect collect, List<Integer> context) {
+            context.add(collect.id());
+            return null;
+        }
     }
 }

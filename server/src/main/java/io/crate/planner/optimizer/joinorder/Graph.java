@@ -205,12 +205,15 @@ public class Graph {
         }
 
         public Graph visitJoin(AbstractJoinPlan joinPlan, Map<Symbol, LogicalPlan> context) {
-            if (joinPlan.joinType() != JoinType.INNER) {
+            if (joinPlan.joinType().isOuter()) {
                 return visitPlan(joinPlan, context);
             }
             var left = joinPlan.lhs().accept(this, context);
             var right = joinPlan.rhs().accept(this, context);
 
+            if (joinPlan.joinType() == JoinType.CROSS) {
+                return left.joinWith(joinPlan, right, Map.of());
+            }
             var joinCondition = joinPlan.joinCondition();
             var edges = new HashMap<Integer, Set<Edge>>();
             // if join condition is null, we have a cross-join
@@ -226,10 +229,15 @@ public class Graph {
                                 var toSymbol = f.arguments().get(1);
                                 var from = context.get(fromSymbol);
                                 var to = context.get(toSymbol);
-                                if (to == null) {
-                                    System.out.println("to = " + to);
+                                if (from == null || to == null) {
+                                    continue;
                                 }
-                                var edge = new Edge(from, fromSymbol, to, toSymbol, joinPlan.joinType(), joinCondition);
+                                var edge = new Edge(from,
+                                                    fromSymbol,
+                                                    to,
+                                                    toSymbol,
+                                                    joinPlan.joinType(),
+                                                    joinCondition);
                                 insertEdge(edges, edge);
                             }
                         }

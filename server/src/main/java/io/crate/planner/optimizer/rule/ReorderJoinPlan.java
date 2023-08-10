@@ -86,13 +86,13 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                 System.out.println("---------------------");
                 System.out.println("Rewrite JoinPlan from");
                 System.out.println("---------------------");
-                System.out.println(printContext.toString());
+                System.out.println(printContext);
                 var result = buildJoinPlan(joinGraph, joinOrder, ids);
                 foo = planStats.memo().extract(result);
                 System.out.println();
                 printContext = new PrintContext(null);
                 foo.print(printContext);
-                System.out.println(printContext.toString());
+                System.out.println(printContext);
                 return Eval.create(
                     ids.getAsInt(),
                     result,
@@ -172,7 +172,7 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                if (result1 != 0) {
                    return result1;
                }
-               return  Integer.compare(o1.to().id(), o2.to().id());
+               return Integer.compare(o1.to().id(), o2.to().id());
             };
             Collections.sort(sortedEdges,edgeComparator);
             for (var edge : edges) {

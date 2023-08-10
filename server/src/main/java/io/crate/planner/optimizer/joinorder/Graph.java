@@ -22,7 +22,6 @@
 package io.crate.planner.optimizer.joinorder;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -136,10 +135,6 @@ public class Graph {
         JoinType joinType,
         Symbol joinCondition) {
 
-        public boolean isCrossJoin() {
-            return fromVariable == null && toVariable == null;
-        }
-
         public Set<Integer> ids() {
             var result = new HashSet<Integer>(2);
             if (from != null) {
@@ -212,14 +207,13 @@ public class Graph {
             var right = joinPlan.rhs().accept(this, context);
 
             if (joinPlan.joinType() == JoinType.CROSS) {
+                // Cross-join means no edge is built
                 return left.joinWith(joinPlan, right, Map.of());
             }
             var joinCondition = joinPlan.joinCondition();
             var edges = new HashMap<Integer, Set<Edge>>();
-            // if join condition is null, we have a cross-join
             if (joinCondition != null) {
                 // find equi-join conditions such as `a.x = b.y` and create edges
-                // TODO deal with the rest of the filters such as `a.x >= 1`
                 var split = QuerySplitter.split(joinCondition);
                 for (var entry : split.entrySet()) {
                     if (entry.getKey().size() == 2) {
@@ -230,7 +224,7 @@ public class Graph {
                                 var from = context.get(fromSymbol);
                                 var to = context.get(toSymbol);
                                 if (from == null || to == null) {
-                                    continue;
+                                    throw new IllegalStateException("");
                                 }
                                 var edge = new Edge(from,
                                                     fromSymbol,

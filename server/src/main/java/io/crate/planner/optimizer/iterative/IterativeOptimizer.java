@@ -133,7 +133,9 @@ public class IterativeOptimizer {
                     isTraceEnabled
                 );
                 if (transformed != null) {
-                    System.out.println("Rule '" + rule.getClass().getSimpleName() + "' transformed the logical plan");
+                    if (isTraceEnabled) {
+                        LOGGER.trace("Rule '" + rule.getClass().getSimpleName() + "' transformed the logical plan");
+                    }
                     // the plan changed, update memo to reference to the new plan
                     context.memo.replace(group, transformed);
                     node = transformed;

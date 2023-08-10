@@ -25,7 +25,6 @@ import static io.crate.planner.optimizer.matcher.Pattern.typeOf;
 import static java.util.Comparator.comparing;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,11 +45,9 @@ import io.crate.metadata.NodeContext;
 import io.crate.metadata.TransactionContext;
 import io.crate.planner.operators.Collect;
 import io.crate.planner.operators.Eval;
-import io.crate.planner.operators.HashJoin;
 import io.crate.planner.operators.JoinPlan;
 import io.crate.planner.operators.LogicalPlan;
 import io.crate.planner.operators.LogicalPlanVisitor;
-import io.crate.planner.operators.NestedLoopJoin;
 import io.crate.planner.operators.PrintContext;
 import io.crate.planner.operators.Rename;
 import io.crate.planner.optimizer.Rule;
@@ -59,7 +56,6 @@ import io.crate.planner.optimizer.iterative.GroupReference;
 import io.crate.planner.optimizer.joinorder.Graph;
 import io.crate.planner.optimizer.matcher.Captures;
 import io.crate.planner.optimizer.matcher.Pattern;
-import io.crate.signatures.antlr.TypeSignaturesParser;
 import io.crate.sql.tree.JoinType;
 
 public class ReorderJoinPlan implements Rule<JoinPlan> {
@@ -202,7 +198,6 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
                 true
             );
         }
-        //TODO handle filters
         return result;
     }
 

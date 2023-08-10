@@ -80,11 +80,12 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
             var joinOrder = reorderJoins(joinGraph);
             if (isOriginalOrder(joinOrder) == false) {
                 var result = buildJoinPlan(joinGraph, joinOrder, ids);
+                foo = planStats.memo().extract(result);
                 System.out.println("------------------");
                 System.out.println("After reordering");
                 System.out.println("------------------");
                 printContext = new PrintContext(null);
-                result.print(printContext);
+                foo.print(printContext);
                 System.out.println(printContext.toString());
                 return Eval.create(
                     ids.getAsInt(),
@@ -161,7 +162,7 @@ public class ReorderJoinPlan implements Rule<JoinPlan> {
             for (var edge : graph.getEdges(rightNode)) {
                 // rebuild join conditions
                 LogicalPlan targetNode = edge.to();
-                if (alreadyJoinedNodes.contains(targetNode.id())) {
+                if (alreadyJoinedNodes.contains(targetNode.id()) && alreadyJoinedNodes.contains(edge.from().id())) {
                     var fromVariable = edge.fromVariable();
                     var toVariable = edge.toVariable();
                     var condition = EqOperator.of(fromVariable, toVariable);

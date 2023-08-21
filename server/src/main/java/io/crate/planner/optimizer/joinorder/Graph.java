@@ -223,9 +223,7 @@ public class Graph {
                                 var toSymbol = f.arguments().get(1);
                                 var from = context.get(fromSymbol);
                                 var to = context.get(toSymbol);
-                                if (from == null || to == null) {
-                                    throw new IllegalStateException("");
-                                }
+                                assert from != null && to != null : "Values for edges must no be null";
                                 var edge = new Edge(from,
                                                     fromSymbol,
                                                     to,

@@ -49,6 +49,8 @@ public class SharedShardContexts {
     private final UnaryOperator<Engine.Searcher> wrapSearcher;
     private final Map<ShardId, SharedShardContext> allocatedShards = new HashMap<>();
     private int readerId = 0;
+    private boolean usedByFetch = false;
+    private boolean usedByCollect = false;
 
     public SharedShardContexts(IndicesService indicesService, UnaryOperator<Engine.Searcher> wrapSearcher) {
         this.indicesService = indicesService;
@@ -95,6 +97,10 @@ public class SharedShardContexts {
         IndexService indexService = indicesService.indexServiceSafe(shardId.getIndex());
         SharedShardContext sharedShardContext = new SharedShardContext(indexService, shardId, readerId, wrapSearcher);
         allocatedShards.put(shardId, sharedShardContext);
+        usedByFetch = true;
+        if (usedByCollect) {
+            throw new RuntimeException("Cannot be shared between fetch and collect");
+        }
         return sharedShardContext;
     }
 
@@ -105,6 +111,10 @@ public class SharedShardContexts {
             sharedShardContext = new SharedShardContext(indexService, shardId, readerId, wrapSearcher);
             allocatedShards.put(shardId, sharedShardContext);
             readerId++;
+        }
+        usedByCollect = true;
+        if (usedByFetch) {
+            throw new RuntimeException("Cannot be shared between fetch and collect");
         }
         return sharedShardContext;
     }

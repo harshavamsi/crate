@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 import io.crate.common.FourFunction;
 import io.crate.exceptions.RoleUnknownException;
+import io.crate.metadata.Schemas;
 import io.crate.metadata.pgcatalog.OidHash;
 
 public interface Roles {
@@ -124,6 +125,18 @@ public interface Roles {
     default boolean hasSchemaPrivilege(Role user, Permission permission, Integer schemaOid) {
         return user.isSuperUser()
             || hasPrivilege(user, permission, null, schemaOid, (r, p, s, o) -> r.matchSchema(p, (Integer) o)) == GRANT;
+    }
+
+    /**
+     * Checks if the user has a stable privilege that matches the given type and ident OID.
+     * @param Schemas        Necessary to produce table oids from idents
+     * @param user           user
+     * @param permission     permission type
+     * @param tableOid       OID of the table
+     */
+    default boolean hasTablePrivilege(Schemas schemas, Role user, Permission permission, Integer tableOid) {
+        return user.isSuperUser()
+            || hasPrivilege(user, permission, null, tableOid, (sc, r, p, s, o) -> r.matchTable(sc, p, (Integer) o)) == GRANT;
     }
 
     /**

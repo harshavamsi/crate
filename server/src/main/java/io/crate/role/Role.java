@@ -23,9 +23,11 @@ package io.crate.role;
 
 import static io.crate.role.Securable.CLUSTER;
 import static io.crate.role.Securable.SCHEMA;
+import static io.crate.role.Securable.TABLE;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -41,7 +43,11 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.jetbrains.annotations.Nullable;
 
+import io.crate.metadata.RelationInfo;
+import io.crate.metadata.RelationName;
+import io.crate.metadata.Schemas;
 import io.crate.metadata.pgcatalog.OidHash;
+import io.crate.sql.tree.QualifiedName;
 
 public class Role implements Writeable, ToXContent {
 
@@ -206,7 +212,7 @@ public class Role implements Writeable, ToXContent {
         return grantedRoles;
     }
 
-    public Policy matchSchema(Permission permission, int oid) {
+    Policy matchSchema(Permission permission, int oid) {
         Policy result = Policy.REVOKE;
         for (var privilege : privileges) {
             Subject ident = privilege.subject();
@@ -214,6 +220,24 @@ public class Role implements Writeable, ToXContent {
                 continue;
             }
             if (ident.securable() == SCHEMA && OidHash.schemaOid(ident.ident()) == oid) {
+                return privilege.policy();
+            }
+            if (ident.securable() == CLUSTER) {
+                result = privilege.policy();
+            }
+        }
+        return result;
+    }
+
+    Policy matchTable(Schemas schemas, Permission permission, int oid) {
+        Policy result = Policy.REVOKE;
+        for (var privilege : privileges) {
+            Subject ident = privilege.subject();
+            if (ident.permission() != permission) {
+                continue;
+            }
+            QualifiedName tableName = QualifiedName.of(Arrays.stream(ident.ident().split(".")).toList());
+            if (ident.securable() == TABLE && OidHash.relationOid(schemas.findRelation(tableName)) == oid) {
                 return privilege.policy();
             }
             if (ident.securable() == CLUSTER) {

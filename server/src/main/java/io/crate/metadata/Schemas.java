@@ -187,7 +187,7 @@ public class Schemas extends AbstractLifecycleComponent implements Iterable<Sche
      * @throws OperationOnInaccessibleRelationException
      **/
     @SuppressWarnings("unchecked")
-    public <T extends RelationInfo> T findRelation(QualifiedName qName,
+    public <T extends RelationInfo> T findfindRelation(QualifiedName qName,
                                                    Operation operation,
                                                    Role user,
                                                    SearchPath searchPath) {

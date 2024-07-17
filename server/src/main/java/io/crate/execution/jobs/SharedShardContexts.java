@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.UnaryOperator;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.index.IndexNotFoundException;
@@ -35,13 +37,15 @@ import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.IndicesService;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import com.carrotsearch.hppc.IntIndexedContainer;
 
-import org.jetbrains.annotations.VisibleForTesting;
 import io.crate.metadata.IndexParts;
 
 public class SharedShardContexts {
+
+    private static final Logger LOGGER = LogManager.getLogger(SharedShardContexts.class);
 
     private final IndicesService indicesService;
     private final UnaryOperator<Engine.Searcher> wrapSearcher;
@@ -83,7 +87,11 @@ public class SharedShardContexts {
             for (var shardCursor : entry.getValue()) {
                 int shardId = shardCursor.value;
                 IndexShard shard = indexService.getShard(shardId);
-                refreshActions.add(shard.awaitShardSearchActive());
+                LOGGER.debug("{} Awaiting shard to become active", shard.shardId());
+                CompletableFuture<Boolean> awaitShardSearchActive = shard.awaitShardSearchActive();
+                refreshActions.add(awaitShardSearchActive.whenComplete((res, err) -> {
+                    LOGGER.debug("{} Shard became active", shard.shardId());
+                }));
             }
         }
         return CompletableFuture.allOf(refreshActions.toArray(CompletableFuture[]::new));

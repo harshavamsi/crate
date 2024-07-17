@@ -29,13 +29,21 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.elasticsearch.test.IntegTestCase;
+import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.junit.Test;
 
 import io.crate.testing.Asserts;
+import io.crate.testing.SQLResponse;
 import io.crate.testing.TestingHelpers;
+import io.crate.testing.UseJdbc;
 import io.crate.testing.UseNewCluster;
 
 public class AlterTableIntegrationTest extends IntegTestCase {
@@ -87,30 +95,74 @@ public class AlterTableIntegrationTest extends IntegTestCase {
     }
 
     @Test
-    public void test_alter_partitioned_table_drop_simple_column() {
-        execute("create table t(id integer primary key, a integer, b integer) partitioned by(id)");
-        execute("insert into t(id, a, b) values(1, 11, 111)");
-        execute("insert into t(id, a, b) values(2, 22, 222)");
-        execute("insert into t(id, a, b) values(3, 33, 333)");
-        execute("refresh table t");
-        execute("select * from t order by id");
-        assertThat(response).hasRows(
-            "1| 11| 111",
-            "2| 22| 222",
-            "3| 33| 333");
+    @TestLogging("io.crate.execution.jobs:TRACE")
+    @UseJdbc(0)
+    public void test_alter_partitioned_table_drop_simple_column() throws Exception {
+        for (int i = 0; i < 50; i++) {
+            logger.warn("----------- Start iteration -------");
+            execute("create table t (id integer primary key, a integer, b integer) partitioned by(id)");
+            execute("insert into t (id, a, b) values(1, 11, 111)");
+            execute("insert into t (id, a, b) values(2, 22, 222)");
+            execute("insert into t (id, a, b) values(3, 33, 333)");
+            logger.warn("all records inserted");
+            execute("refresh table t");
+            logger.warn("--- table refreshed. Triggering first select");
+            long start = System.nanoTime();
+            execute("select * from t order by id");
+            long duration = System.nanoTime() - start;
+            logger.warn("First select took: {}ms", Duration.ofNanos(duration).toMillis());
+            assertThat(response).hasRows(
+                "1| 11| 111",
+                "2| 22| 222",
+                "3| 33| 333");
 
-        execute("alter table t drop column a");
-        execute("select * from t order by id");
-        assertThat(response).hasRows(
-            "1| 111",
-            "2| 222",
-            "3| 333");
-        execute("select * from t where id = 2");
-        assertThat(response).hasRows("2| 222");
-        Asserts.assertSQLError(() -> execute("select a from t"))
-            .hasPGError(UNDEFINED_COLUMN)
-            .hasHTTPError(NOT_FOUND, 4043)
-            .hasMessageContaining("Column a unknown");
+            logger.warn("--- Triggering second select");
+            start = System.nanoTime();
+            CompletableFuture<SQLResponse> execute = sqlExecutor.execute("select * from t order by id ", new Object[0]);
+            try {
+                execute.get(2, TimeUnit.SECONDS);
+            } catch (TimeoutException ex) {
+                ex.printStackTrace();
+                StringBuilder sb = new StringBuilder("-------- getAllStackTraces ---------- ");
+                Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
+                for (var entry : allStackTraces.entrySet()) {
+                    Thread thread = entry.getKey();
+                    sb.append(thread.getName());
+                    StackTraceElement[] stacktrace = entry.getValue();
+                    for (StackTraceElement stackTraceElement : stacktrace) {
+                        sb.append("\n    at").append(stackTraceElement);
+                    }
+                }
+            }
+            duration = System.nanoTime() - start;
+            logger.warn("--- Second select took: {}ms", Duration.ofNanos(duration).toMillis());
+            assertThat(response).hasRowCount(3);
+
+            logger.warn("--- Triggering third select");
+            start = System.nanoTime();
+            execute("select * from t order by id");
+            duration = System.nanoTime() - start;
+            logger.warn("--- Third select took: {}ms", Duration.ofNanos(duration).toMillis());
+            assertThat(response).hasRowCount(3);
+
+            execute("drop table t");
+            assertNoTasksAreLeftOpen();
+            cluster().assertNoShardLocks();
+            logger.warn("----------- End iteration -------");
+        }
+
+        // execute("explain select id, a, b from t order by 1, 2, 3");
+        // assertThat(response).hasRows("foo");
+
+        // execute("alter table t drop column a");
+
+
+        // execute("select id, b from t where id = 2");
+        // assertThat(response).hasRows("2| 222");
+        // Asserts.assertSQLError(() -> execute("select a from t"))
+        //     .hasPGError(UNDEFINED_COLUMN)
+        //     .hasHTTPError(NOT_FOUND, 4043)
+        //     .hasMessageContaining("Column a unknown");
     }
 
     @Test

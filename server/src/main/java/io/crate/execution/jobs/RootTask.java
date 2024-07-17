@@ -34,12 +34,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import org.apache.logging.log4j.Logger;
-
 import org.jetbrains.annotations.VisibleForTesting;
+
 import io.crate.concurrent.CompletionListenable;
 import io.crate.exceptions.JobKilledException;
 import io.crate.exceptions.SQLExceptions;
@@ -200,10 +199,17 @@ public class RootTask implements CompletionListenable<Void> {
                 }
             }
             try {
-                logger.trace("Starting task job={} phase={} name={}", jobId, phaseId, task.name());
+                logger.trace("task.start() trigger job={} phase={} name={}", jobId, phaseId, task.name());
                 CompletableFuture<Void> started = task.start();
-                if (started != null) {
-                    return started.thenCompose(ignored -> start(taskIndex + 1));
+                if (started == null || (started.isDone() && !started.isCompletedExceptionally())) {
+                    logger.trace("task.start() completed job={} phase={} name={}", jobId, phaseId, task.name());
+                    continue;
+                } else if (started.isCompletedExceptionally()) {
+                    return started;
+                } else {
+                    return started.whenComplete((res, err) -> {
+                        logger.trace("task.start() completed job={} phase={} name={}", jobId, phaseId, task.name());
+                    }).thenCompose(ignored -> start(taskIndex + 1));
                 }
             } catch (Throwable t) {
                 return CompletableFuture.failedFuture(t);

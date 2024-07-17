@@ -2318,6 +2318,10 @@ public final class TestCluster implements Closeable {
         ensureEstimatedStats();
         assertRequestsFinished();
         assertNoInFlightDocsInEngine();
+        assertNoShardLocks();
+    }
+
+    public void assertNoShardLocks() throws AssertionError {
         for (NodeAndClient nodeAndClient : nodes.values()) {
             NodeEnvironment env = nodeAndClient.node().getNodeEnvironment();
             Set<ShardId> shardIds = env.lockedShards();

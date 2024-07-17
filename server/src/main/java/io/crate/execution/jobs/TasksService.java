@@ -42,11 +42,11 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.Singleton;
 import org.elasticsearch.common.util.concurrent.ConcurrentCollections;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import org.jetbrains.annotations.VisibleForTesting;
 import io.crate.concurrent.CountdownFuture;
 import io.crate.exceptions.TaskMissing;
 import io.crate.execution.engine.collect.stats.JobsLogs;
@@ -162,7 +162,7 @@ public class TasksService extends AbstractLifecycleComponent {
         }
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace(
-                "RootTask created for job={} tasks={} totalTasks={}",
+                "RootTask created for job={} childTasks={} activeRootTasks={}",
                 jobId,
                 builder.size(),
                 activeTasks.size()

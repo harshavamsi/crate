@@ -35,6 +35,8 @@ import java.util.concurrent.Executor;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.search.profile.query.QueryProfiler;
@@ -104,6 +106,8 @@ import io.crate.profile.ProfilingContext;
  * </pre>
  **/
 public class JobLauncher {
+
+    private static final Logger LOGGER = LogManager.getLogger(JobLauncher.class);
 
     private final ActionExecutor<NodeRequest<JobRequest>, JobResponse> transportJobAction;
     private final ActionExecutor<KillJobsNodeRequest, KillResponse> killNodeAction;
@@ -251,6 +255,7 @@ public class JobLauncher {
             final int currentBucket = bucketIdx;
             // initializationTracker for localNodeOperations is triggered via SetBucketCallback
             localTask.start().whenComplete((result, err) -> {
+                LOGGER.debug("Job start completed jobId={} result={result} err={err}", jobId, result, err);
                 if (err == null) {
                     sendJobRequests(
                         txnCtx,
@@ -267,6 +272,7 @@ public class JobLauncher {
             });
         } else {
             localTask.start().whenComplete((result, err) -> {
+                LOGGER.debug("Job start completed jobId={} result={result} err={err}", jobId, result, err);
                 if (err == null) {
                     initializationTracker.jobInitialized();
                     sendJobRequests(

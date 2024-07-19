@@ -24,7 +24,6 @@ package io.crate.analyze;
 import static io.crate.role.Role.Properties.JWT_KEY;
 import static io.crate.role.Role.Properties.PASSWORD_KEY;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import io.crate.analyze.expressions.ExpressionAnalysisContext;
@@ -66,13 +65,15 @@ public class RoleAnalyzer {
     }
 
     public AnalyzedAlterRole analyze(AlterRoleReset node) {
-        if (node.property() == null) {
+        if (node.property() == null) { // RESET ALL
             return new AnalyzedAlterRole(node.name(), new GenericProperties<>(Map.of()), true);
         }
+
         validateProperty(node.property());
-        Map<String, Symbol> properties = new HashMap<>();
-        properties.put(node.property(), Literal.NULL);
-        return new AnalyzedAlterRole(node.name(), new GenericProperties<>(properties), true);
+        return new AnalyzedAlterRole(
+            node.name(),
+            new GenericProperties<>(Map.of(node.property(), Literal.NULL)),
+            true);
     }
 
     private GenericProperties<Symbol> validateProperties(GenericProperties<Expression> properties,

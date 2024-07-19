@@ -154,7 +154,7 @@ public class SessionsTest extends CrateDummyClusterServiceUnitTest {
 
         Role john = RolesHelper.userOf("john");
         assertThat(sessions.newSession("", john).sessionSettings().hashJoinsEnabled()).isTrue();
-        john = RolesHelper.userOf("john", Set.of(), Set.of(), null, null, Map.of("enable_hashjoin", false));
+        john = RolesHelper.userOf("john", null, Map.of("enable_hashjoin", false));
         assertThat(sessions.newSession("", john).sessionSettings().hashJoinsEnabled()).isFalse();
     }
 

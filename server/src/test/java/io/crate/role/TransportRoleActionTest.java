@@ -333,8 +333,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
             Set.of(),
             new HashSet<>(),
             oldPassword,
-            new JwtProperties("https:dummy.org", "test", null),
-            null)
+            new JwtProperties("https:dummy.org", "test", null))
         );
         var oldRolesMetadata = new RolesMetadata(roleWithJwtAndPassword);
         Metadata.Builder mdBuilder = Metadata.builder()
@@ -356,9 +355,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
                     Set.of(),
                     new HashSet<>(),
                     oldPassword,
-                    new JwtProperties("new_issuer", "new_username", null),
-                Map.of()
-                )
+                    new JwtProperties("new_issuer", "new_username", null))
             )
         );
     }
@@ -372,8 +369,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
             Set.of(),
             new HashSet<>(),
             oldPassword,
-            new JwtProperties("https:dummy.org", "test", null),
-            null)
+            new JwtProperties("https:dummy.org", "test", null))
         );
         var oldRolesMetadata = new RolesMetadata(roleWithJwtAndPassword);
         Metadata.Builder mdBuilder = Metadata.builder()
@@ -395,8 +391,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
                     Set.of(),
                     new HashSet<>(),
                     null,
-                    null,
-                    Map.of()
+                    null
                 )
             )
         );
@@ -411,16 +406,14 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
             Set.of(),
             new HashSet<>(),
             null,
-            new JwtProperties("https:dummy.org", "test", "aud1"),
-            null)
+            new JwtProperties("https:dummy.org", "test", "aud1"))
         );
         roleWithJwtAndPassword.put("John", userOf(
             "John",
             Set.of(),
             new HashSet<>(),
             null,
-            new JwtProperties("john's valid iss", "john's valid username", "aud2"),
-            null)
+            new JwtProperties("john's valid iss", "john's valid username", "aud2"))
         );
         var oldRolesMetadata = new RolesMetadata(roleWithJwtAndPassword);
         Metadata.Builder mdBuilder = Metadata.builder()
@@ -444,10 +437,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         var password = getSecureHash("johns-pwd"); // Has randomness, keep it for assertions.
         role.put("John", userOf(
             "John",
-            Set.of(),
-            new HashSet<>(),
             password,
-            null,
             Map.of("search_path", "my_schema"))
         );
         var oldRolesMetadata = new RolesMetadata(role);
@@ -467,10 +457,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         assertThat(roles(mdBuilder)).containsExactlyEntriesOf(
             Map.of("John", userOf(
                     "John",
-                    Set.of(),
-                    new HashSet<>(),
                     password,
-                    null,
                     Map.of("search_path", "my_schema", "enable_hashjoin", false)
                 )
             )
@@ -483,10 +470,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         var password = getSecureHash("johns-pwd"); // Has randomness, keep it for assertions.
         role.put("John", userOf(
             "John",
-            Set.of(),
-            new HashSet<>(),
             password,
-            null,
             Map.of("search_path", "my_schema"))
         );
         var oldRolesMetadata = new RolesMetadata(role);
@@ -506,10 +490,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         assertThat(roles(mdBuilder)).containsExactlyEntriesOf(
             Map.of("John", userOf(
                     "John",
-                    Set.of(),
-                    new HashSet<>(),
                     password,
-                    null,
                     Map.of("search_path", "schema1, schema2", "enable_hashjoin", false)
                 )
             )
@@ -522,10 +503,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         var password = getSecureHash("johns-pwd"); // Has randomness, keep it for assertions.
         role.put("John", userOf(
             "John",
-            Set.of(),
-            new HashSet<>(),
             password,
-            null,
             Map.of("search_path", "my_schema", "enable_hashjoin", false))
         );
         var oldRolesMetadata = new RolesMetadata(role);
@@ -545,10 +523,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         assertThat(roles(mdBuilder)).containsExactlyEntriesOf(
             Map.of("John", userOf(
                     "John",
-                    Set.of(),
-                    new HashSet<>(),
                     password,
-                    null,
                     Map.of("enable_hashjoin", false)
                 )
             )
@@ -561,10 +536,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         var password = getSecureHash("johns-pwd"); // Has randomness, keep it for assertions.
         role.put("John", userOf(
             "John",
-            Set.of(),
-            new HashSet<>(),
             password,
-            null,
             Map.of("search_path", "my_schema", "enable_hashjoin", false))
         );
         var oldRolesMetadata = new RolesMetadata(role);
@@ -584,10 +556,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
         assertThat(roles(mdBuilder)).containsExactlyEntriesOf(
             Map.of("John", userOf(
                     "John",
-                    Set.of(),
-                    new HashSet<>(),
                     password,
-                    null,
                     Map.of()
                 )
             )

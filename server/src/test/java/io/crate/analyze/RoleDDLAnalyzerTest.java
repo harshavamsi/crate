@@ -203,6 +203,16 @@ public class RoleDDLAnalyzerTest extends CrateDummyClusterServiceUnitTest {
     }
 
     @Test
+    public void test_alter_role_all_settings() throws Exception {
+        for (String userOrRole : List.of("USER", "ROLE")) {
+            AnalyzedAlterRole analysis = e.analyze("ALTER " + userOrRole + " ROOT RESET ALL");
+            assertThat(analysis.roleName()).isEqualTo("root");
+            assertThat(analysis.properties().isEmpty()).isTrue();
+            assertThat(analysis.isReset()).isTrue();
+        }
+    }
+
+    @Test
     public void test_alter_role_reset_invalid_session_setting() throws Exception {
         for (String userOrRole : List.of("USER", "ROLE")) {
             assertThatThrownBy(() -> e.analyze("ALTER " + userOrRole + " ROOT RESET invalid_setting"))

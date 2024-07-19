@@ -80,8 +80,7 @@ public final class RolesHelper {
         Set.of(),
         new HashSet<>(),
         getSecureHash("johns-pwd"),
-        new JwtProperties("https://console.cratedb-dev.cloud/api/v2/meta/jwk/", "cloud_user", "test_cluster_id"),
-        null
+        new JwtProperties("https://console.cratedb-dev.cloud/api/v2/meta/jwk/", "cloud_user", "test_cluster_id")
     );
 
 
@@ -178,25 +177,30 @@ public final class RolesHelper {
                               Set<Privilege> privileges,
                               Set<GrantedRole> grantedRoles,
                               @Nullable SecureHash password,
-                              @Nullable JwtProperties jwtProperties,
+                              @Nullable JwtProperties jwtProperties) {
+        return new Role(name, true, privileges, grantedRoles, password, jwtProperties, Map.of());
+    }
+
+    public static Role userOf(String name,
+                              @Nullable SecureHash password,
                               @Nullable Map<String, Object> sessionSettings) {
-        return new Role(name, true, privileges, grantedRoles, password, jwtProperties, sessionSettings);
+        return new Role(name, true, Set.of(), Set.of(), password, null, sessionSettings);
     }
 
     public static Role roleOf(String name) {
-        return new Role(name, false, Set.of(), Set.of(), null, null, null);
+        return new Role(name, false, Set.of(), Set.of(), null, null, Map.of());
     }
 
     public static Role roleOf(String name, Set<Privilege> privileges, List<String> grantedRoles) {
-        return new Role(name, false, privileges, buildGrantedRoles(grantedRoles), null, null, null);
+        return new Role(name, false, privileges, buildGrantedRoles(grantedRoles), null, null, Map.of());
     }
 
     public static Role roleOf(String name, Set<Privilege> privileges) {
-        return new Role(name, false, privileges, Set.of(), null, null, null);
+        return new Role(name, false, privileges, Set.of(), null, null, Map.of());
     }
 
     public static Role roleOf(String name, List<String> grantedRoles) {
-        return new Role(name, false, Set.of(), buildGrantedRoles(grantedRoles), null, null, null);
+        return new Role(name, false, Set.of(), buildGrantedRoles(grantedRoles), null, null, Map.of());
     }
 
     @NotNull

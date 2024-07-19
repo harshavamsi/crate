@@ -73,8 +73,9 @@ public class RolesMetadataTest extends ESTestCase {
             Set.of(),
             DummyParentRoles,
             getSecureHash("fords-pwd")));
-        DummyUsersAndRolesWithParentRoles.put("John", userOf(
+        DummyUsersAndRolesWithParentRoles.put("John", new Role(
             "John",
+            true,
             Set.of(),
             new HashSet<>(),
             getSecureHash("johns-pwd"),

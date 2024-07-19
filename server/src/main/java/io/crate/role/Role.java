@@ -48,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 import io.crate.common.collections.Sets;
 import io.crate.metadata.pgcatalog.OidHash;
 import io.crate.metadata.settings.session.SessionSetting;
+import io.crate.metadata.settings.session.SessionSettingProvider;
 import io.crate.metadata.settings.session.SessionSettingRegistry;
 import io.crate.sql.tree.GenericProperties;
 import io.crate.types.DataTypes;
@@ -58,9 +59,17 @@ public class Role implements Writeable, ToXContent {
         "crate",
         new RolePrivileges(Set.of()),
         Set.of(),
-        new Properties(true, null, null, null),
+        new Properties(true, null, null, Map.of()),
         true);
 
+    /**
+     * Create properties to store for a user/role
+     * @param login Ability to login or not
+     * @param password User's password
+     * @param jwtProperties User's JWT properties for alternative authentication method
+     * @param sessionSettings It can contain settings defined in {@link SessionSettingRegistry} and settings dynamically
+     *                        created through {@link SessionSettingProvider}, e.g. optimizer rules.
+     */
     public record Properties(boolean login,
                              @Nullable SecureHash password,
                              @Nullable JwtProperties jwtProperties,
@@ -97,6 +106,7 @@ public class Role implements Writeable, ToXContent {
             for (var p : properties.stream()
                 .filter(p -> !PASSWORD_KEY.equals(p.getKey()) && !JWT_KEY.equals(p.getKey())).toList()) {
                 SessionSetting<?> sessionSetting = sessionSettingRegistry.settings().get(p.getKey());
+                assert sessionSetting != null : "sessionSetting shouldn't be null";
                 if (resetSessionSettings == false) {
                     sessionSetting.validate(p.getValue());
                 }
@@ -189,7 +199,11 @@ public class Role implements Writeable, ToXContent {
             name,
             new RolePrivileges(privileges),
             grantedRoles,
-            new Properties(login, password, jwtProperties, sessionSettings),
+            new Properties(
+                login,
+                password,
+                jwtProperties,
+                sessionSettings == null ? Map.of() : Collections.unmodifiableMap(sessionSettings)),
             false);
     }
 

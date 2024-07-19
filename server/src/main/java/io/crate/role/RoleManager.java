@@ -22,6 +22,7 @@
 package io.crate.role;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.jetbrains.annotations.Nullable;
@@ -42,8 +43,8 @@ public interface RoleManager extends Roles {
     CompletableFuture<Long> createRole(String roleName,
                                        boolean isUser,
                                        @Nullable SecureHash hashedPw,
-                                       @Nullable JwtProperties jwtProperties
-    );
+                                       @Nullable JwtProperties jwtProperties,
+                                       @Nullable Map<String, Object> sessionSettings);
 
     /**
      * Delete a roles.
@@ -64,13 +65,17 @@ public interface RoleManager extends Roles {
      * @param newJwtProperties new jwt properties. if null properties are removed from the role
      * @param resetPassword hints how to treat NULL password: as not provided and supposed to be kept or explicitly set to NULL.
      * @param resetJwtProperties hints how to treat NULL jwt: as not provided and supposed to be kept or explicitly set to NULL.
+     * @param resetSessionSettings If false, new session settings are set, if true they are reset to their original values.
+     * @param sessionSettings New session settings, if same settings exists, gets overridden, if null nothing is changed.
      * @return 1 if the role has been updated, otherwise a failed future.
      */
     CompletableFuture<Long> alterRole(String roleName,
                                       @Nullable SecureHash newHashedPw,
                                       @Nullable JwtProperties newJwtProperties,
                                       boolean resetPassword,
-                                      boolean resetJwtProperties);
+                                      boolean resetJwtProperties,
+                                      boolean resetSessionSettings,
+                                      @Nullable Map<String, Object> sessionSettings);
 
     /**
      * Apply given list of {@link Privilege}s or {@link Role} for each given role

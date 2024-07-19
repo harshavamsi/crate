@@ -31,53 +31,61 @@ import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.test.ESTestCase;
 import org.junit.Test;
 
-public class CreateRoleRequestTest extends ESTestCase {
+public class AlterRoleRequestTest extends ESTestCase {
 
     @Test
     public void testStreaming() throws Exception {
-        var crr1 =
-            new CreateRoleRequest("testUser",
-                false,
+        var arr1 =
+            new AlterRoleRequest("testUser",
                 SecureHash.of(new SecureString("passwd".toCharArray())),
                 new JwtProperties("https:dummy.org", "test", "test_aud"),
+                true,
+                true,
+                true,
                 Map.of("enable_hashjoin", "false", "statement_timeout", "10m")
             );
 
         BytesStreamOutput out = new BytesStreamOutput();
-        crr1.writeTo(out);
-        var crr2 = new CreateRoleRequest(out.bytes().streamInput());
-        assertThat(crr2.roleName()).isEqualTo(crr1.roleName());
-        assertThat(crr2.secureHash()).isEqualTo(crr1.secureHash());
-        assertThat(crr2.isUser()).isFalse();
-        var jwtProps = crr2.jwtProperties();
+        arr1.writeTo(out);
+        var arr2 = new AlterRoleRequest(out.bytes().streamInput());
+        assertThat(arr2.roleName()).isEqualTo(arr1.roleName());
+        assertThat(arr2.secureHash()).isEqualTo(arr1.secureHash());
+        var jwtProps = arr2.jwtProperties();
         assertThat(jwtProps).isNotNull();
         assertThat(jwtProps.iss()).isEqualTo("https:dummy.org");
         assertThat(jwtProps.username()).isEqualTo("test");
         assertThat(jwtProps.aud()).isEqualTo("test_aud");
-        assertThat(crr2.sessionSettings()).isEqualTo(crr1.sessionSettings());
+        assertThat(arr2.resetPassword()).isTrue();
+        assertThat(arr2.resetJwtProperties()).isTrue();
+        assertThat(arr2.resetSessionSettings()).isTrue();
+        assertThat(arr2.sessionSettings()).isEqualTo(arr1.sessionSettings());
 
         out = new BytesStreamOutput();
         out.setVersion(Version.V_5_5_0);
-        crr1.writeTo(out);
+        arr1.writeTo(out);
         var in = out.bytes().streamInput();
         in.setVersion(Version.V_5_5_0);
-        crr2 = new CreateRoleRequest(in);
-        assertThat(crr2.roleName()).isEqualTo(crr1.roleName());
-        assertThat(crr2.secureHash()).isEqualTo(crr1.secureHash());
-        assertThat(crr2.isUser()).isTrue();
-        assertThat(crr2.jwtProperties()).isNull();
-        assertThat(crr2.sessionSettings()).isNull();
+        arr2 = new AlterRoleRequest(in);
+        assertThat(arr2.roleName()).isEqualTo(arr1.roleName());
+        assertThat(arr2.secureHash()).isEqualTo(arr1.secureHash());
+        assertThat(arr2.resetPassword()).isFalse();
+        assertThat(arr2.resetJwtProperties()).isFalse();
+        assertThat(arr2.jwtProperties()).isNull();
+        assertThat(arr2.resetSessionSettings()).isFalse();
+        assertThat(arr2.sessionSettings()).isNull();
 
         out = new BytesStreamOutput();
         out.setVersion(Version.V_5_8_0);
-        crr1.writeTo(out);
+        arr1.writeTo(out);
         in = out.bytes().streamInput();
         in.setVersion(Version.V_5_8_0);
-        crr2 = new CreateRoleRequest(in);
-        assertThat(crr2.roleName()).isEqualTo(crr1.roleName());
-        assertThat(crr2.secureHash()).isEqualTo(crr1.secureHash());
-        assertThat(crr2.isUser()).isFalse();
-        assertThat(crr2.jwtProperties()).isEqualTo(crr1.jwtProperties());
-        assertThat(crr2.sessionSettings()).isNull();
+        arr2 = new AlterRoleRequest(in);
+        assertThat(arr2.roleName()).isEqualTo(arr1.roleName());
+        assertThat(arr2.secureHash()).isEqualTo(arr1.secureHash());
+        assertThat(arr2.resetPassword()).isTrue();
+        assertThat(arr2.resetJwtProperties()).isTrue();
+        assertThat(arr2.jwtProperties()).isEqualTo(arr1.jwtProperties());
+        assertThat(arr2.resetSessionSettings()).isFalse();
+        assertThat(arr2.sessionSettings()).isNull();
     }
 }

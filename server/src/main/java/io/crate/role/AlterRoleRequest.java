@@ -28,6 +28,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
 
@@ -38,20 +39,26 @@ public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
     private final JwtProperties jwtProperties;
 
     private final boolean resetPassword;
-
     private final boolean resetJwtProperties;
+    private final boolean resetSessionSettings;
 
+    @Nullable
+    private final Map<String, Object> sessionSettings;
 
     public AlterRoleRequest(String roleName,
                             @Nullable SecureHash secureHash,
                             @Nullable JwtProperties jwtProperties,
                             boolean resetPassword,
-                            boolean resetJwtProperties) {
+                            boolean resetJwtProperties,
+                            boolean resetSessionSettings,
+                            @Nullable Map<String, Object> sessionSettings) {
         this.roleName = roleName;
         this.secureHash = secureHash;
         this.jwtProperties = jwtProperties;
         this.resetPassword = resetPassword;
         this.resetJwtProperties = resetJwtProperties;
+        this.resetSessionSettings = resetSessionSettings;
+        this.sessionSettings = sessionSettings;
     }
 
     public String roleName() {
@@ -76,6 +83,15 @@ public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
         return resetJwtProperties;
     }
 
+    public boolean resetSessionSettings() {
+        return resetSessionSettings;
+    }
+
+    @Nullable
+    public Map<String, Object> sessionSettings() {
+        return sessionSettings;
+    }
+
     public AlterRoleRequest(StreamInput in) throws IOException {
         super(in);
         roleName = in.readString();
@@ -89,6 +105,13 @@ public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
             this.resetPassword = false;
             this.resetJwtProperties = false;
         }
+        if (in.getVersion().onOrAfter(Version.V_5_9_0)) {
+            this.resetSessionSettings = in.readBoolean();
+            this.sessionSettings = in.readMap();
+        } else {
+            this.resetSessionSettings = false;
+            this.sessionSettings = null;
+        }
     }
 
     @Override
@@ -100,6 +123,10 @@ public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
             out.writeOptionalWriteable(jwtProperties);
             out.writeBoolean(resetPassword);
             out.writeBoolean(resetJwtProperties);
+        }
+        if (out.getVersion().onOrAfter(Version.V_5_9_0)) {
+            out.writeBoolean(resetSessionSettings);
+            out.writeMap(sessionSettings);
         }
     }
 }

@@ -28,6 +28,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class CreateRoleRequest extends AcknowledgedRequest<CreateRoleRequest> {
 
@@ -39,15 +40,21 @@ public class CreateRoleRequest extends AcknowledgedRequest<CreateRoleRequest> {
     @Nullable
     private final JwtProperties jwtProperties;
 
+    @Nullable
+    private final Map<String, Object> sessionSettings;
+
+
 
     public CreateRoleRequest(String roleName,
                              boolean isUser,
                              @Nullable SecureHash attributes,
-                             @Nullable JwtProperties jwtProperties) {
+                             @Nullable JwtProperties jwtProperties,
+                             @Nullable Map<String, Object> sessionSettings) {
         this.roleName = roleName;
         this.isUser = isUser;
         this.secureHash = attributes;
         this.jwtProperties = jwtProperties;
+        this.sessionSettings = sessionSettings;
     }
 
     public String roleName() {
@@ -68,6 +75,11 @@ public class CreateRoleRequest extends AcknowledgedRequest<CreateRoleRequest> {
         return jwtProperties;
     }
 
+    @Nullable
+    public Map<String, Object> sessionSettings() {
+        return sessionSettings;
+    }
+
     public CreateRoleRequest(StreamInput in) throws IOException {
         super(in);
         roleName = in.readString();
@@ -82,6 +94,11 @@ public class CreateRoleRequest extends AcknowledgedRequest<CreateRoleRequest> {
         } else {
             this.jwtProperties = null;
         }
+        if (in.getVersion().onOrAfter(Version.V_5_9_0)) {
+            this.sessionSettings = in.readMap();
+        } else {
+            this.sessionSettings = null;
+        }
     }
 
     @Override
@@ -94,6 +111,9 @@ public class CreateRoleRequest extends AcknowledgedRequest<CreateRoleRequest> {
         out.writeOptionalWriteable(secureHash);
         if (out.getVersion().onOrAfter(Version.V_5_7_0)) {
             out.writeOptionalWriteable(jwtProperties);
+        }
+        if (out.getVersion().onOrAfter(Version.V_5_9_0)) {
+            out.writeMap(sessionSettings);
         }
     }
 }

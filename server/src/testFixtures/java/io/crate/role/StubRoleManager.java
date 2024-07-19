@@ -23,6 +23,7 @@ package io.crate.role;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.jetbrains.annotations.Nullable;
@@ -51,7 +52,8 @@ public class StubRoleManager implements RoleManager {
     public CompletableFuture<Long> createRole(String roleName,
                                               boolean isUser,
                                               @Nullable SecureHash hashedPw,
-                                              @Nullable JwtProperties jwtProperties) {
+                                              @Nullable JwtProperties jwtProperties,
+                                              @Nullable Map<String, Object> sessionSettings) {
         return CompletableFuture.failedFuture(new UnsupportedFeatureException("createRole is not implemented in StubRoleManager"));
     }
 
@@ -65,7 +67,9 @@ public class StubRoleManager implements RoleManager {
                                              @Nullable SecureHash newHashedPw,
                                              @Nullable JwtProperties newJwtProperties,
                                              boolean resetPassword,
-                                             boolean resetJwtProperties) {
+                                             boolean resetJwtProperties,
+                                             boolean resetSessionSettings,
+                                             @Nullable Map<String, Object> newSessionSettings) {
         return CompletableFuture.failedFuture(new UnsupportedFeatureException("alterRole is not implemented in StubRoleManager"));
     }
 

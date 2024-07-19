@@ -31,6 +31,7 @@ import io.crate.data.Row1;
 import io.crate.data.RowConsumer;
 import io.crate.execution.support.OneRowActionListener;
 import io.crate.expression.symbol.Symbol;
+import io.crate.metadata.settings.session.SessionSettingRegistry;
 import io.crate.planner.DependencyCarrier;
 import io.crate.planner.Plan;
 import io.crate.planner.PlannerContext;
@@ -46,10 +47,14 @@ public class AlterRolePlan implements Plan {
 
     private final RoleManager roleManager;
     private final AnalyzedAlterRole alterRole;
+    private final SessionSettingRegistry sessionSettingRegistry;
 
-    public AlterRolePlan(AnalyzedAlterRole alterRole, RoleManager roleManager) {
+    public AlterRolePlan(AnalyzedAlterRole alterRole,
+                         RoleManager roleManager,
+                         SessionSettingRegistry sessionSettingRegistry) {
         this.alterRole = alterRole;
         this.roleManager = roleManager;
+        this.sessionSettingRegistry = sessionSettingRegistry;
     }
 
     @Override
@@ -70,13 +75,24 @@ public class AlterRolePlan implements Plan {
             subQueryResults
         );
         GenericProperties<Object> evaluatedProperties = alterRole.properties().map(eval);
-        Properties roleProperties = Role.Properties.of(false, evaluatedProperties);
+        Properties roleProperties = Role.Properties.of(
+            false,
+            evaluatedProperties,
+            alterRole.isReset(),
+            sessionSettingRegistry);
         SecureHash newPassword = roleProperties.password();
         boolean resetPassword = evaluatedProperties.contains(Properties.PASSWORD_KEY) && newPassword == null;
         JwtProperties newJwtProperties = roleProperties.jwtProperties();
         boolean resetJwtProperties = evaluatedProperties.contains(Properties.JWT_KEY) && newJwtProperties == null;
 
-        roleManager.alterRole(alterRole.roleName(), newPassword, newJwtProperties, resetPassword, resetJwtProperties)
+        roleManager.alterRole(
+                alterRole.roleName(),
+                newPassword,
+                newJwtProperties,
+                resetPassword,
+                resetJwtProperties,
+                alterRole.isReset(),
+                roleProperties.sessionSettings())
             .whenComplete(new OneRowActionListener<>(consumer, rCount -> new Row1(rCount == null ? -1 : rCount)));
     }
 }

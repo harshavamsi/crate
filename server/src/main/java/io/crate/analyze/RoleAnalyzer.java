@@ -21,13 +21,22 @@
 
 package io.crate.analyze;
 
+import static io.crate.role.Role.Properties.JWT_KEY;
+import static io.crate.role.Role.Properties.PASSWORD_KEY;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import io.crate.analyze.expressions.ExpressionAnalysisContext;
 import io.crate.analyze.expressions.ExpressionAnalyzer;
 import io.crate.analyze.relations.FieldProvider;
+import io.crate.expression.symbol.Literal;
 import io.crate.expression.symbol.Symbol;
 import io.crate.metadata.CoordinatorTxnCtx;
 import io.crate.metadata.NodeContext;
-import io.crate.sql.tree.AlterRole;
+import io.crate.metadata.settings.session.SessionSettingRegistry;
+import io.crate.sql.tree.AlterRoleReset;
+import io.crate.sql.tree.AlterRoleSet;
 import io.crate.sql.tree.CreateRole;
 import io.crate.sql.tree.Expression;
 import io.crate.sql.tree.GenericProperties;
@@ -35,26 +44,53 @@ import io.crate.sql.tree.GenericProperties;
 public class RoleAnalyzer {
 
     private final NodeContext nodeCtx;
+    private final SessionSettingRegistry sessionSettingRegistry;
 
-    RoleAnalyzer(NodeContext nodeCtx) {
+    RoleAnalyzer(NodeContext nodeCtx, SessionSettingRegistry sessionSettingRegistry) {
         this.nodeCtx = nodeCtx;
+        this.sessionSettingRegistry = sessionSettingRegistry;
     }
 
     public AnalyzedCreateRole analyze(CreateRole node,
                                       ParamTypeHints paramTypeHints,
                                       CoordinatorTxnCtx txnContext) {
-        return new AnalyzedCreateRole(
-            node.name(),
-            node.isUser(),
-            mappedProperties(node.properties(), paramTypeHints, txnContext));
+        GenericProperties<Symbol> properties = validateProperties(node.properties(), paramTypeHints, txnContext);
+        return new AnalyzedCreateRole(node.name(), node.isUser(), properties);
     }
 
-    public AnalyzedAlterRole analyze(AlterRole<Expression> node,
+    public AnalyzedAlterRole analyze(AlterRoleSet<Expression> node,
                                      ParamTypeHints paramTypeHints,
                                      CoordinatorTxnCtx txnContext) {
-        return new AnalyzedAlterRole(
-            node.name(),
-            mappedProperties(node.properties(), paramTypeHints, txnContext));
+        GenericProperties<Symbol> properties = validateProperties(node.properties(), paramTypeHints, txnContext);
+        return new AnalyzedAlterRole(node.name(), properties, false);
+    }
+
+    public AnalyzedAlterRole analyze(AlterRoleReset node) {
+        if (node.property() == null) {
+            return new AnalyzedAlterRole(node.name(), new GenericProperties<>(Map.of()), true);
+        }
+        validateProperty(node.property());
+        Map<String, Symbol> properties = new HashMap<>();
+        properties.put(node.property(), Literal.NULL);
+        return new AnalyzedAlterRole(node.name(), new GenericProperties<>(properties), true);
+    }
+
+    private GenericProperties<Symbol> validateProperties(GenericProperties<Expression> properties,
+                                                         ParamTypeHints paramTypeHints,
+                                                         CoordinatorTxnCtx txnContext) {
+        GenericProperties<Symbol> validatedProperties = mappedProperties(properties, paramTypeHints, txnContext);
+        for (String property : properties.keys().stream().toList()) {
+            validateProperty(property);
+        }
+        return validatedProperties;
+    }
+
+    private void validateProperty(String property) {
+        if (!PASSWORD_KEY.equals(property) && !JWT_KEY.equals(property)
+            && sessionSettingRegistry.settings().get(property) == null) {
+
+            throw new IllegalArgumentException("Invalid session setting: '" + property + "'");
+        }
     }
 
     private GenericProperties<Symbol> mappedProperties(GenericProperties<Expression> properties,

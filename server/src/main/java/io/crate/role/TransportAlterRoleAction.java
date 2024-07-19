@@ -22,6 +22,7 @@
 package io.crate.role;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
@@ -105,7 +106,9 @@ public class TransportAlterRoleAction extends TransportMasterNodeAction<AlterRol
                                 request.secureHash(),
                                 request.jwtProperties(),
                                 request.resetPassword(),
-                                request.resetJwtProperties()
+                                request.resetJwtProperties(),
+                                request.resetSessionSettings(),
+                                request.sessionSettings()
                         );
                         return ClusterState.builder(currentState).metadata(mdBuilder).build();
                     }
@@ -123,7 +126,9 @@ public class TransportAlterRoleAction extends TransportMasterNodeAction<AlterRol
                              @Nullable SecureHash secureHash,
                              @Nullable JwtProperties jwtProperties,
                              boolean resetPassword,
-                             boolean resetJwtProperties) {
+                             boolean resetJwtProperties,
+                             boolean resetSessionSettings,
+                             @Nullable Map<String, Object> newSessionSettings) {
         RolesMetadata oldRolesMetadata = (RolesMetadata) mdBuilder.getCustom(RolesMetadata.TYPE);
         UsersMetadata oldUsersMetadata = (UsersMetadata) mdBuilder.getCustom(UsersMetadata.TYPE);
         if (oldUsersMetadata == null && oldRolesMetadata == null) {
@@ -153,7 +158,11 @@ public class TransportAlterRoleAction extends TransportMasterNodeAction<AlterRol
                 );
             }
 
-            newMetadata.roles().put(roleName, role.with(newSecureHash, newJwtProperties));
+            newMetadata.roles().put(roleName, role.with(
+                    newSecureHash,
+                    newJwtProperties,
+                    resetSessionSettings,
+                    newSessionSettings));
             exists = true;
         }
         if (newMetadata.equals(oldRolesMetadata)) {

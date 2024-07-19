@@ -30,6 +30,7 @@ import io.crate.data.Row1;
 import io.crate.data.RowConsumer;
 import io.crate.execution.support.OneRowActionListener;
 import io.crate.expression.symbol.Symbol;
+import io.crate.metadata.settings.session.SessionSettingRegistry;
 import io.crate.planner.DependencyCarrier;
 import io.crate.planner.Plan;
 import io.crate.planner.PlannerContext;
@@ -43,10 +44,14 @@ public class CreateRolePlan implements Plan {
 
     private final AnalyzedCreateRole createRole;
     private final RoleManager roleManager;
+    private final SessionSettingRegistry sessionSettingRegistry;
 
-    public CreateRolePlan(AnalyzedCreateRole createRole, RoleManager roleManager) {
+    public CreateRolePlan(AnalyzedCreateRole createRole,
+                          RoleManager roleManager,
+                          SessionSettingRegistry sessionSettingRegistry) {
         this.createRole = createRole;
         this.roleManager = roleManager;
+        this.sessionSettingRegistry = sessionSettingRegistry;
     }
 
     @Override
@@ -68,7 +73,7 @@ public class CreateRolePlan implements Plan {
             subQueryResults
         );
         GenericProperties<Object> evaluatedProperties = createRole.properties().map(eval);
-        Properties roleProperties = Role.Properties.of(createRole.isUser(), evaluatedProperties);
+        Properties roleProperties = Role.Properties.of(createRole.isUser(), evaluatedProperties, sessionSettingRegistry);
         if (roleProperties.login() == false && roleProperties.password() != null) {
             throw new UnsupportedOperationException(
                 "Creating a ROLE with a password is not allowed, use CREATE USER instead");
@@ -77,7 +82,8 @@ public class CreateRolePlan implements Plan {
                 createRole.roleName(),
                 createRole.isUser(),
                 roleProperties.password(),
-                roleProperties.jwtProperties())
+                roleProperties.jwtProperties(),
+                roleProperties.sessionSettings())
             .whenComplete(new OneRowActionListener<>(consumer, rCount -> new Row1(rCount == null ? -1 : rCount)));
     }
 }

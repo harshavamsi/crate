@@ -50,7 +50,8 @@ import io.crate.role.Role;
 import io.crate.role.Roles;
 import io.crate.sql.tree.AlterClusterRerouteRetryFailed;
 import io.crate.sql.tree.AlterPublication;
-import io.crate.sql.tree.AlterRole;
+import io.crate.sql.tree.AlterRoleReset;
+import io.crate.sql.tree.AlterRoleSet;
 import io.crate.sql.tree.AlterSubscription;
 import io.crate.sql.tree.AlterTable;
 import io.crate.sql.tree.AlterTableAddColumn;
@@ -209,7 +210,7 @@ public class Analyzer {
         this.dropRepositoryAnalyzer = new DropRepositoryAnalyzer(repositoryService);
         this.createSnapshotAnalyzer = new CreateSnapshotAnalyzer(repositoryService, nodeCtx);
         this.dropSnapshotAnalyzer = new DropSnapshotAnalyzer(repositoryService);
-        this.roleAnalyzer = new RoleAnalyzer(nodeCtx);
+        this.roleAnalyzer = new RoleAnalyzer(nodeCtx, sessionSettingRegistry);
         this.createBlobTableAnalyzer = new CreateBlobTableAnalyzer(schemas, nodeCtx);
         this.createFunctionAnalyzer = new CreateFunctionAnalyzer(nodeCtx);
         this.dropFunctionAnalyzer = new DropFunctionAnalyzer();
@@ -336,11 +337,16 @@ public class Analyzer {
         }
 
         @Override
-        public AnalyzedStatement visitAlterRole(AlterRole<?> node, Analysis context) {
+        public AnalyzedStatement visitAlterRoleSet(AlterRoleSet<?> node, Analysis context) {
             return roleAnalyzer.analyze(
-                (AlterRole<Expression>) node,
+                (AlterRoleSet<Expression>) node,
                 context.paramTypeHints(),
                 context.transactionContext());
+        }
+
+        @Override
+        public AnalyzedStatement visitAlterRoleReset(AlterRoleReset node, Analysis context) {
+            return roleAnalyzer.analyze(node);
         }
 
         @Override

@@ -23,6 +23,7 @@ package io.crate.role;
 
 import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.elasticsearch.client.node.NodeClient;
@@ -74,8 +75,9 @@ public class RoleManagerService implements RoleManager {
     public CompletableFuture<Long> createRole(String roleName,
                                               boolean isUser,
                                               @Nullable SecureHash hashedPw,
-                                              @Nullable JwtProperties jwtProperties) {
-        CreateRoleRequest request = new CreateRoleRequest(roleName, isUser, hashedPw, jwtProperties);
+                                              @Nullable JwtProperties jwtProperties,
+                                              @Nullable Map<String, Object> sessionSettings) {
+        CreateRoleRequest request = new CreateRoleRequest(roleName, isUser, hashedPw, jwtProperties, sessionSettings);
         return client.execute(TransportCreateRoleAction.ACTION, request).thenApply(r -> {
             if (r.doesUserExist()) {
                 throw new RoleAlreadyExistsException(String.format(Locale.ENGLISH, "Role '%s' already exists", roleName));
@@ -104,13 +106,17 @@ public class RoleManagerService implements RoleManager {
                                              @Nullable SecureHash newHashedPw,
                                              @Nullable JwtProperties newJwtProperties,
                                              boolean resetPassword,
-                                             boolean resetJwtProperties) {
+                                             boolean resetJwtProperties,
+                                             boolean resetSessionSettings,
+                                             Map<String, Object> sessionSettings) {
         AlterRoleRequest request = new AlterRoleRequest(
             roleName,
             newHashedPw,
             newJwtProperties,
             resetPassword,
-            resetJwtProperties
+            resetJwtProperties,
+            resetSessionSettings,
+            sessionSettings
         );
         return client.execute(TransportAlterRoleAction.ACTION, request).thenApply(r -> {
             if (r.doesUserExist() == false) {

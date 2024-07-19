@@ -75,6 +75,19 @@ public class SessionSetting<T> {
         setter.accept(sessionSettings, converted);
     }
 
+    public void apply(CoordinatorSessionSettings sessionSettings, Object value) {
+        Object[] values = new Object[] {value};
+        validator.accept(values);
+        T converted = converter.apply(values);
+        setter.accept(sessionSettings, converted);
+    }
+
+    public void validate(Object value) {
+        Object[] values = new Object[] {value};
+        validator.accept(values);
+        converter.apply(values);
+    }
+
     public String getValue(SessionSettings sessionSettings) {
         return getter.apply(sessionSettings);
     }

@@ -78,7 +78,9 @@ public class RolesMetadataTest extends ESTestCase {
             Set.of(),
             new HashSet<>(),
             getSecureHash("johns-pwd"),
-            new JwtProperties("https:dummy.org", "test", null))
+            new JwtProperties("https:dummy.org", "test", null),
+            Map.of("statement_timeout", "1m",
+                   "enable_hashjoin", false))
         );
         DummyUsersAndRolesWithParentRoles.put("role1", roleOf("role1"));
         DummyUsersAndRolesWithParentRoles.put("role2", roleOf("role2"));

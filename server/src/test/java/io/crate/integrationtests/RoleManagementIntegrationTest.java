@@ -23,6 +23,7 @@ package io.crate.integrationtests;
 
 import static io.crate.protocols.postgres.PGErrorStatus.INTERNAL_ERROR;
 import static io.crate.protocols.postgres.PGErrorStatus.UNDEFINED_OBJECT;
+import static io.crate.protocols.postgres.PGErrorStatus.UNDEFINED_TABLE;
 import static io.crate.testing.Asserts.assertThat;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
@@ -293,5 +294,24 @@ public class RoleManagementIntegrationTest extends BaseRolesIntegrationTest {
             .hasPGError(INTERNAL_ERROR)
             .hasHTTPError(CONFLICT, 4099)
             .hasMessageContaining("Another role with the same combination of iss/username jwt properties already exists");
+    }
+
+    @Test
+    public void test_user_session_settings_are_applied_and_reset() {
+        execute("CREATE USER user1 WITH (password = 'pwd', search_path='my_schema')");
+        assertUserIsCreated("user1");
+        execute("GRANT DQL ON SCHEMA my_schema TO user1");
+        execute("CREATE table my_schema.t(a int);");
+        execute("INSERT INTO my_schema.t(a) values(1),(2)");
+        execute("REFRESH TABLE my_schema.t");
+
+        executeAs("SELECT * FROM t ORDER BY 1", "user1");
+        assertThat(response).hasRows("1", "2");
+
+        execute("ALTER USER user1 RESET search_path");
+        Asserts.assertSQLError(() -> executeAs("SELECT * FROM t", "user1"))
+            .hasPGError(UNDEFINED_TABLE)
+            .hasHTTPError(NOT_FOUND, 4041)
+            .hasMessageContaining("Relation 't' unknown");
     }
 }

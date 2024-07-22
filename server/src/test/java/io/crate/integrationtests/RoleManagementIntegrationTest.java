@@ -120,6 +120,10 @@ public class RoleManagementIntegrationTest extends BaseRolesIntegrationTest {
             "normal| []| {}| NULL| false",
             "the_grantor| []| {}| NULL| false"
         );
+        executeAsSuperuser(
+            "SELECT session_settings['enable_hashjoin'] FROM sys.users " +
+                "WHERE name = 'arthur'");
+        assertThat(response).hasRows("f");
     }
 
     @Test

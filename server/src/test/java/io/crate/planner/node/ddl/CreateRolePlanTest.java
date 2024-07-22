@@ -71,7 +71,7 @@ public class CreateRolePlanTest {
     @Test
     public void test_session_property_with_invalid_value() {
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("statement_timeout", "invalid"));
-        assertThatThrownBy(() -> Role.validateSessionSettings("John", properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.validateSessionSettings("John", properties, sessionSettingRegistry))
             .isExactlyInstanceOf(IllegalArgumentException.class)
             .hasMessage("Invalid interval format: invalid");
     }
@@ -79,7 +79,7 @@ public class CreateRolePlanTest {
     @Test
     public void test_session_property_which_is_read_only() {
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("server_version", "1.0.0."));
-        assertThatThrownBy(() -> Role.validateSessionSettings("John", properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.validateSessionSettings("John", properties, sessionSettingRegistry))
             .isExactlyInstanceOf(UnsupportedOperationException.class)
             .hasMessage("\"server_version\" cannot be changed.");
     }

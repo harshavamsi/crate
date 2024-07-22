@@ -159,7 +159,8 @@ public class UserAuthenticationMethodTest extends ESTestCase {
                 new HashSet<>(),
                 getSecureHash("johns-pwd"),
                 // User doesn't have "aud" JWT property, cluster id will be used as aud.
-                new JwtProperties("https://console.cratedb-dev.cloud/api/v2/meta/jwk/", "cloud_user", null))
+                new JwtProperties("https://console.cratedb-dev.cloud/api/v2/meta/jwk/", "cloud_user", null)
+            )
         );
         JWTAuthenticationMethod jwtAuth = new JWTAuthenticationMethod(
             roles,
@@ -185,7 +186,8 @@ public class UserAuthenticationMethodTest extends ESTestCase {
                 new HashSet<>(),
                 getSecureHash("johns-pwd"),
                 // User doesn't have "aud" JWT property, cluster id will be used as aud.
-                new JwtProperties("https://console.cratedb-dev.cloud/api/v2/meta/jwk/", "cloud_user", null))
+                new JwtProperties("https://console.cratedb-dev.cloud/api/v2/meta/jwk/", "cloud_user", null)
+            )
         );
         JWTAuthenticationMethod jwtAuth = new JWTAuthenticationMethod(
             roles,

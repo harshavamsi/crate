@@ -23,7 +23,9 @@ package io.crate.role.metadata;
 
 import static io.crate.types.DataTypes.BOOLEAN;
 import static io.crate.types.DataTypes.STRING;
+import static io.crate.types.DataTypes.UNTYPED_OBJECT;
 
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import io.crate.metadata.ColumnIdent;
@@ -54,6 +56,7 @@ public class SysUsersTableInfo {
                 .add("role", STRING, GrantedRole::roleName)
                 .add("grantor", STRING, GrantedRole::grantor)
             .endObjectArray()
+            .add("session_settings", UNTYPED_OBJECT, x -> new TreeMap<>(x.sessionSettings()))
             .setPrimaryKeys(ColumnIdent.of("name"))
             .build();
     }

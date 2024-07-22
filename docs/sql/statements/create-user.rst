@@ -103,5 +103,17 @@ The following ``user_parameter`` are supported to define a new user account:
 
 .. vale on
 
+:session settings:
+
+  Any of the modifiable :ref:`session settings <conf-session>`. The value set
+  is used for the user when logins to the database, instead of the default
+  value, thus, there is no need to use ``SET`` statements to modify the setting
+  value on its user session.
+
+.. NOTE::
+
+    The session settings can only be set to a user and not on a role and
+    are therefore are not inherited to other users.
+
 .. _iss: https://www.rfc-editor.org/rfc/rfc7519#section-4.1.1
 .. _aud: https://www.rfc-editor.org/rfc/rfc7519#section-4.1.3

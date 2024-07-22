@@ -22,6 +22,10 @@ example:
 
   SET search_path TO myschema, doc;
 
+Alternatively, session settings can be modified permanently from their default
+values for a user, during :ref:`user creation <ref-create-user>` or with the
+use of :ref:`ALTER ROLE <ref-alter-role>`.
+
 To retrieve the current value of a session setting, use :ref:`SHOW <ref-show>`
 e.g:
 

@@ -1919,7 +1919,7 @@ public class TestStatementBuilder {
         printStatement("alter role r1 set (password = null, session_setting='foo')");
         printStatement("alter role r1 set (session_setting=?)");
         printStatement("alter role r1 reset session_setting");
-        printStatement("alter role r1 reset \"session.settin\"");
+        printStatement("alter role r1 reset \"session.setting\"");
         printStatement("alter role r1 reset all");
     }
 

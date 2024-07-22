@@ -550,7 +550,7 @@ public class TransportRoleActionTest extends CrateDummyClusterServiceUnitTest {
             false,
             false,
             true,
-            null
+            Map.of()
         );
         assertThat(exists).isTrue();
         assertThat(roles(mdBuilder)).containsExactlyEntriesOf(

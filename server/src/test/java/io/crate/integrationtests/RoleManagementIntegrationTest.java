@@ -89,6 +89,7 @@ public class RoleManagementIntegrationTest extends BaseRolesIntegrationTest {
             "jwt['username']| text",
             "name| text",
             "password| text",
+            "session_settings| object",
             "superuser| boolean"
         );
     }
@@ -102,7 +103,7 @@ public class RoleManagementIntegrationTest extends BaseRolesIntegrationTest {
 
     @Test
     public void testSysUsersTable() {
-        executeAsSuperuser("CREATE USER arthur");
+        executeAsSuperuser("CREATE USER arthur WITH (enable_hashjoin = false)");
         assertUserIsCreated("arthur");
         executeAsSuperuser("CREATE USER ford WITH (password = 'foo')");
         assertUserIsCreated("ford");
@@ -110,14 +111,14 @@ public class RoleManagementIntegrationTest extends BaseRolesIntegrationTest {
         assertRoleIsCreated("a_role");
         executeAs("GRANT a_role to arthur", GRANTOR_USER);
         executeAsSuperuser(
-            "SELECT name, granted_roles, password, superuser FROM sys.users " +
+            "SELECT name, granted_roles, session_settings, password, superuser FROM sys.users " +
             "WHERE superuser = FALSE ORDER BY name");
         // Every created user is not a superuser
         assertThat(response).hasRows(
-            "arthur| [{role=a_role, grantor=the_grantor}]| NULL| false",
-            "ford| []| ********| false",
-            "normal| []| NULL| false",
-            "the_grantor| []| NULL| false"
+            "arthur| [{role=a_role, grantor=the_grantor}]| {enable_hashjoin=false}| NULL| false",
+            "ford| []| {}| ********| false",
+            "normal| []| {}| NULL| false",
+            "the_grantor| []| {}| NULL| false"
         );
     }
 

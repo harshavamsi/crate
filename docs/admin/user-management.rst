@@ -195,6 +195,18 @@ methods. You can specify the user's password in the ``WITH`` clause of the
     cr> CREATE USER user_b WITH (password = 'a_secret_password');
     CREATE OK, 1 row affected (... sec)
 
+.. hide:
+
+    cr> DROP USER user_b;
+    DROP OK, 1 row affected (... sec)
+
+Additionally, :ref:`session settings <conf-session>` can be defined during
+user creation, and can be appended as comma separated list, together with the
+password::
+
+    cr> CREATE USER user_b WITH (password = 'a_secret_password', statement_timeout = '5m');
+    CREATE OK, 1 row affected (... sec)
+
 The username parameter of the statement follows the principles of an identifier
 which means that it must be double-quoted if it contains special characters
 (e.g. whitespace) or if the case needs to be maintained::
@@ -233,6 +245,30 @@ The password can be reset (cleared) if specified as ``NULL``::
 
     The built-in superuser ``crate`` has no password and it is not possible to
     set a new password for this user.
+
+To add or alter :ref:`session settings <conf-session>` use the following SQL
+statement::
+
+    cr> ALTER USER user_b SET (search_path = 'myschema', statement_timeout = '10m');
+    ALTER OK, 1 row affected (... sec)
+
+To reset a :ref:`session setting <conf-session>` to its default value use the
+following SQL statement::
+
+    cr> ALTER USER user_b RESET statement_timeout;
+    ALTER OK, 1 row affected (... sec)
+
+.. hide:
+
+   cr> ALTER USER user_a SET (search_path = 'new_schema', statement_timeout = '1h');
+    ALTER OK, 1 row affected (... sec)
+
+To reset all modified :ref:`session setting <conf-session>` for a user to their
+default values, use the following SQL statement::
+
+    cr> ALTER USER user_a RESET ALL;
+    ALTER OK, 1 row affected (... sec)
+
 
 ``DROP USER``
 =============
@@ -280,14 +316,14 @@ CrateDB clusters is also part of that list.
 
 To list all existing users query the table::
 
-    cr> SELECT name, granted_roles, password, superuser FROM sys.users order by name;
-    +--------+----------------------------------------------------------------------------------+----------+-----------+
-    | name   | granted_roles                                                                    | password | superuser |
-    +--------+----------------------------------------------------------------------------------+----------+-----------+
-    | crate  | []                                                                               | NULL     | TRUE      |
-    | user_a | [{"grantor": "crate", "role": "role_a"}, {"grantor": "crate", "role": "role_b"}] | NULL     | FALSE     |
-    | user_b | []                                                                               | ******** | FALSE     |
-    +--------+----------------------------------------------------------------------------------+----------+-----------+
+    cr> SELECT name, granted_roles, password, session_settings, superuser FROM sys.users order by name;
+    +--------+----------------------------------------------------------------------------------+----------+-----------------------------+-----------+
+    | name   | granted_roles                                                                    | password | session_settings            | superuser |
+    +--------+----------------------------------------------------------------------------------+----------+-----------------------------+-----------+
+    | crate  | []                                                                               | NULL     | {}                          | TRUE      |
+    | user_a | [{"grantor": "crate", "role": "role_a"}, {"grantor": "crate", "role": "role_b"}] | NULL     | {}                          | FALSE     |
+    | user_b | []                                                                               | ******** | {"search_path": "myschema"} | FALSE     |
+    +--------+----------------------------------------------------------------------------------+----------+-----------------------------+-----------+
     SELECT 3 rows in set (... sec)
 
 

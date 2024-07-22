@@ -21,7 +21,6 @@
 
 package io.crate.role;
 
-import static io.crate.role.Role.Properties.JWT_KEY;
 import static io.crate.role.Securable.CLUSTER;
 import static io.crate.role.Securable.SCHEMA;
 
@@ -105,6 +104,19 @@ public class Role implements Writeable, ToXContent {
                 sessionSettings.put(sessionSetting.name(), p.getValue());
             }
             return new Properties(login, hash, jwtProperties, Collections.unmodifiableMap(sessionSettings));
+        }
+
+        public static void validateSessionSettings(String userName,
+                                                   GenericProperties<Object> properties,
+                                                   SessionSettingRegistry sessionSettingRegistry) {
+            CoordinatorSessionSettings coordinatorSessionSettings = new CoordinatorSessionSettings(
+                new Role(userName, true, Set.of(), Set.of(), null, null, Map.of()));
+            for (var p : properties.stream()
+                .filter(p -> !Properties.PASSWORD_KEY.equals(p.getKey()) && !JWT_KEY.equals(p.getKey())).toList()) {
+                SessionSetting<?> sessionSetting = sessionSettingRegistry.settings().get(p.getKey());
+                assert sessionSetting != null : "sessionSetting shouldn't be null";
+                sessionSetting.apply(coordinatorSessionSettings, p.getValue());
+            }
         }
 
         public static Properties fromXContent(XContentParser parser) throws IOException {
@@ -262,7 +274,7 @@ public class Role implements Writeable, ToXContent {
         Map<String, Object> oldSessionSettings = sessionSettings();
 
         if (resetSessionSettings) {
-            if (sessionSettings != null) {
+            if (sessionSettings.isEmpty() == false) {
                 if (oldSessionSettings != null) {
                     updatedSessionSettings.putAll(oldSessionSettings);
                 }
@@ -313,19 +325,6 @@ public class Role implements Writeable, ToXContent {
 
     public Set<GrantedRole> grantedRoles() {
         return grantedRoles;
-    }
-
-    public static void validateSessionSettings(String userName,
-                                               GenericProperties<Object> properties,
-                                               SessionSettingRegistry sessionSettingRegistry) {
-        CoordinatorSessionSettings coordinatorSessionSettings = new CoordinatorSessionSettings(
-            new Role(userName, true, Set.of(), Set.of(), null, null, Map.of()));
-        for (var p : properties.stream()
-            .filter(p -> !Properties.PASSWORD_KEY.equals(p.getKey()) && !JWT_KEY.equals(p.getKey())).toList()) {
-            SessionSetting<?> sessionSetting = sessionSettingRegistry.settings().get(p.getKey());
-            assert sessionSetting != null : "sessionSetting shouldn't be null";
-            sessionSetting.apply(coordinatorSessionSettings, p.getValue());
-        }
     }
 
     public Policy matchSchema(Permission permission, int oid) {

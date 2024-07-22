@@ -76,7 +76,7 @@ public class AlterRolePlan implements Plan {
         );
         GenericProperties<Object> evaluatedProperties = alterRole.properties().map(eval);
         if (alterRole.isReset() == false) {
-            Role.validateSessionSettings(alterRole.roleName(), evaluatedProperties, sessionSettingRegistry);
+            Role.Properties.validateSessionSettings(alterRole.roleName(), evaluatedProperties, sessionSettingRegistry);
         }
         Properties roleProperties = Role.Properties.of(
             false,

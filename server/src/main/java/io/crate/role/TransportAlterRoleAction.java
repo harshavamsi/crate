@@ -128,7 +128,7 @@ public class TransportAlterRoleAction extends TransportMasterNodeAction<AlterRol
                              boolean resetPassword,
                              boolean resetJwtProperties,
                              boolean resetSessionSettings,
-                             @Nullable Map<String, Object> newSessionSettings) {
+                             Map<String, Object> newSessionSettings) {
         RolesMetadata oldRolesMetadata = (RolesMetadata) mdBuilder.getCustom(RolesMetadata.TYPE);
         UsersMetadata oldUsersMetadata = (UsersMetadata) mdBuilder.getCustom(UsersMetadata.TYPE);
         if (oldUsersMetadata == null && oldRolesMetadata == null) {
@@ -146,6 +146,10 @@ public class TransportAlterRoleAction extends TransportMasterNodeAction<AlterRol
                 }
                 if (jwtProperties != null || resetJwtProperties) {
                     throw new UnsupportedFeatureException("Setting JWT properties to a ROLE is not allowed");
+                }
+                if (newSessionSettings.isEmpty() == false || resetSessionSettings) {
+                    throw new UnsupportedFeatureException(
+                        "Setting or resetting session settings to a ROLE is not allowed");
                 }
             }
 

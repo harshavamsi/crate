@@ -341,7 +341,7 @@ public class UserAuthenticationMethodTest extends ESTestCase {
             Set.of(),
             null,
             new JwtProperties("dummy", "dummy", null),
-            null
+            Map.of()
         );
         Roles roles = () -> List.of(userWithModifiedJwtProperty);
         JWTAuthenticationMethod jwtAuth = new JWTAuthenticationMethod(

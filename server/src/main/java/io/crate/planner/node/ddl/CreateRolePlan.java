@@ -73,6 +73,7 @@ public class CreateRolePlan implements Plan {
             subQueryResults
         );
         GenericProperties<Object> evaluatedProperties = createRole.properties().map(eval);
+        Role.validateSessionSettings(createRole.roleName(), evaluatedProperties, sessionSettingRegistry);
         Properties roleProperties = Role.Properties.of(createRole.isUser(), evaluatedProperties, sessionSettingRegistry);
         if (roleProperties.login() == false && roleProperties.password() != null) {
             throw new UnsupportedOperationException(

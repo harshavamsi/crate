@@ -83,7 +83,7 @@ public class RolesMetadata extends AbstractNamedDiffable<Metadata.Custom> implem
         RolesMetadata rolesMetadata = new RolesMetadata();
         for (var user : usersMetadata.users().entrySet()) {
             var userName = user.getKey();
-            var role = new Role(userName, true, getPrivileges.apply(userName), Set.of(), user.getValue(), null, null);
+            var role = new Role(userName, true, getPrivileges.apply(userName), Set.of(), user.getValue(), null, Map.of());
             rolesMetadata.roles().put(userName, role);
         }
         return rolesMetadata;

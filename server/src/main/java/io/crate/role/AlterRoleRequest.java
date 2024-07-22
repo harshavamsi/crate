@@ -21,14 +21,14 @@
 
 package io.crate.role;
 
-import org.elasticsearch.Version;
-import org.elasticsearch.action.support.master.AcknowledgedRequest;
-import org.jetbrains.annotations.Nullable;
-import org.elasticsearch.common.io.stream.StreamInput;
-import org.elasticsearch.common.io.stream.StreamOutput;
-
 import java.io.IOException;
 import java.util.Map;
+
+import org.elasticsearch.Version;
+import org.elasticsearch.action.support.master.AcknowledgedRequest;
+import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.io.stream.StreamOutput;
+import org.jetbrains.annotations.Nullable;
 
 public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
 
@@ -51,7 +51,7 @@ public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
                             boolean resetPassword,
                             boolean resetJwtProperties,
                             boolean resetSessionSettings,
-                            @Nullable Map<String, Object> sessionSettings) {
+                            Map<String, Object> sessionSettings) {
         this.roleName = roleName;
         this.secureHash = secureHash;
         this.jwtProperties = jwtProperties;
@@ -87,7 +87,6 @@ public class AlterRoleRequest extends AcknowledgedRequest<AlterRoleRequest> {
         return resetSessionSettings;
     }
 
-    @Nullable
     public Map<String, Object> sessionSettings() {
         return sessionSettings;
     }

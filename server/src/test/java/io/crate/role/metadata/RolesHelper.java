@@ -166,11 +166,11 @@ public final class RolesHelper {
     }
 
     public static Role userOf(String name, Set<Privilege> privileges, @Nullable SecureHash password) {
-        return new Role(name, true, privileges, Set.of(), password, null, null);
+        return new Role(name, true, privileges, Set.of(), password, null, Map.of());
     }
 
     public static Role userOf(String name, Set<Privilege> privileges, Set<GrantedRole> grantedRoles, @Nullable SecureHash password) {
-        return new Role(name, true, privileges, grantedRoles, password, null, null);
+        return new Role(name, true, privileges, grantedRoles, password, null, Map.of());
     }
 
     public static Role userOf(String name,
@@ -183,7 +183,7 @@ public final class RolesHelper {
 
     public static Role userOf(String name,
                               @Nullable SecureHash password,
-                              @Nullable Map<String, Object> sessionSettings) {
+                              Map<String, Object> sessionSettings) {
         return new Role(name, true, Set.of(), Set.of(), password, null, sessionSettings);
     }
 

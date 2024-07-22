@@ -145,24 +145,6 @@ public class RoleDDLAnalyzerTest extends CrateDummyClusterServiceUnitTest {
     }
 
     @Test
-    public void test_create_user_and_role_with_invalid_settings() throws Exception {
-        for (String userOrRole : List.of("USER", "ROLE")) {
-            assertThatThrownBy(() -> e.analyze("CREATE " + userOrRole + " ROOT WITH (invalid_setting = 10)"))
-                .isExactlyInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Invalid session setting: 'invalid_setting'");
-        }
-    }
-
-    @Test
-    public void test_alter_user_and_role_with_invalid_settings() throws Exception {
-        for (String userOrRole : List.of("USER", "ROLE")) {
-            assertThatThrownBy(() -> e.analyze("ALTER " + userOrRole + " ROOT SET (invalid_setting = 10)"))
-                .isExactlyInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Invalid session setting: 'invalid_setting'");
-        }
-    }
-
-    @Test
     public void testCreateUserWithPasswordIsStringLiteral() throws Exception {
         for (String userOrRole : List.of("USER", "ROLE")) {
             assertThatThrownBy(() -> e.analyze("CREATE " + userOrRole + " ROOT WITH (PASSWORD = NO_STRING)"))
@@ -209,15 +191,6 @@ public class RoleDDLAnalyzerTest extends CrateDummyClusterServiceUnitTest {
             assertThat(analysis.roleName()).isEqualTo("root");
             assertThat(analysis.properties().isEmpty()).isTrue();
             assertThat(analysis.isReset()).isTrue();
-        }
-    }
-
-    @Test
-    public void test_alter_role_reset_invalid_session_setting() throws Exception {
-        for (String userOrRole : List.of("USER", "ROLE")) {
-            assertThatThrownBy(() -> e.analyze("ALTER " + userOrRole + " ROOT RESET invalid_setting"))
-                .isExactlyInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Invalid session setting: 'invalid_setting'");
         }
     }
 }

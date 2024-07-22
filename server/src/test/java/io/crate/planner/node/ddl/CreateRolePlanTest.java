@@ -37,9 +37,9 @@ public class CreateRolePlanTest {
     private final SessionSettingRegistry sessionSettingRegistry = new SessionSettingRegistry(Set.of());
 
     @Test
-    public void test_invalid_password_property() throws Exception {
+    public void test_invalid_property() throws Exception {
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("invalid", "password"));
-        assertThatThrownBy(() -> Role.Properties.of(true, properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties, sessionSettingRegistry))
             .isExactlyInstanceOf(IllegalArgumentException.class)
             .hasMessage("Setting 'invalid' is not supported");
     }
@@ -47,7 +47,7 @@ public class CreateRolePlanTest {
     @Test
     public void test_empty_password_string_is_rejected() throws Exception {
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("password", ""));
-        assertThatThrownBy(() -> Role.Properties.of(true, properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties, sessionSettingRegistry))
             .isExactlyInstanceOf(IllegalArgumentException.class)
             .hasMessage("Password must not be empty");
     }
@@ -56,14 +56,14 @@ public class CreateRolePlanTest {
     public void test_invalid_jwt_property() throws Exception {
         // Missing jwt property
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("jwt", Map.of("iss", "dummy.org")));
-        assertThatThrownBy(() -> Role.Properties.of(true, properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties, sessionSettingRegistry))
             .isExactlyInstanceOf(IllegalArgumentException.class)
             .hasMessage("JWT property 'username' must have a non-null value");
 
         // Invalid jwt property
         GenericProperties<Object> properties2 = new GenericProperties<>(Map.of("jwt",
             Map.of("iss", "dummy.org", "username", "test", "dummy_property", "dummy_val")));
-        assertThatThrownBy(() -> Role.Properties.of(true, properties2, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties2, sessionSettingRegistry))
             .isExactlyInstanceOf(IllegalArgumentException.class)
             .hasMessage("Only 'iss', 'username' and 'aud' JWT properties are allowed");
     }
@@ -71,7 +71,7 @@ public class CreateRolePlanTest {
     @Test
     public void test_session_property_with_invalid_value() {
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("statement_timeout", "invalid"));
-        assertThatThrownBy(() -> Role.Properties.validateSessionSettings("John", properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties, sessionSettingRegistry))
             .isExactlyInstanceOf(IllegalArgumentException.class)
             .hasMessage("Invalid interval format: invalid");
     }
@@ -79,8 +79,16 @@ public class CreateRolePlanTest {
     @Test
     public void test_session_property_which_is_read_only() {
         GenericProperties<Object> properties = new GenericProperties<>(Map.of("server_version", "1.0.0."));
-        assertThatThrownBy(() -> Role.Properties.validateSessionSettings("John", properties, sessionSettingRegistry))
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties, sessionSettingRegistry))
             .isExactlyInstanceOf(UnsupportedOperationException.class)
             .hasMessage("\"server_version\" cannot be changed.");
+    }
+
+    @Test
+    public void test_session_setting_reset_invalid_session_setting() throws Exception {
+        GenericProperties<Object> properties = new GenericProperties<>(Map.of("invalid_property", "NULL"));
+        assertThatThrownBy(() -> Role.Properties.of("John", true, false, properties, sessionSettingRegistry))
+            .isExactlyInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Setting 'invalid_property' is not supported");
     }
 }

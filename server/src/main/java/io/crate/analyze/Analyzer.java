@@ -210,7 +210,7 @@ public class Analyzer {
         this.dropRepositoryAnalyzer = new DropRepositoryAnalyzer(repositoryService);
         this.createSnapshotAnalyzer = new CreateSnapshotAnalyzer(repositoryService, nodeCtx);
         this.dropSnapshotAnalyzer = new DropSnapshotAnalyzer(repositoryService);
-        this.roleAnalyzer = new RoleAnalyzer(nodeCtx, sessionSettingRegistry);
+        this.roleAnalyzer = new RoleAnalyzer(nodeCtx);
         this.createBlobTableAnalyzer = new CreateBlobTableAnalyzer(schemas, nodeCtx);
         this.createFunctionAnalyzer = new CreateFunctionAnalyzer(nodeCtx);
         this.dropFunctionAnalyzer = new DropFunctionAnalyzer();

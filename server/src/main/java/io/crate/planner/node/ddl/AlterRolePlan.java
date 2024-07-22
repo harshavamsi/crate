@@ -75,11 +75,10 @@ public class AlterRolePlan implements Plan {
             subQueryResults
         );
         GenericProperties<Object> evaluatedProperties = alterRole.properties().map(eval);
-        if (alterRole.isReset() == false) {
-            Role.Properties.validateSessionSettings(alterRole.roleName(), evaluatedProperties, sessionSettingRegistry);
-        }
         Properties roleProperties = Role.Properties.of(
+            alterRole.roleName(),
             false,
+            alterRole.isReset(),
             evaluatedProperties,
             sessionSettingRegistry);
         SecureHash newPassword = roleProperties.password();

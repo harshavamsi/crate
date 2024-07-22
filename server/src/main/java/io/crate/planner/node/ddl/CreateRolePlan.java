@@ -73,8 +73,12 @@ public class CreateRolePlan implements Plan {
             subQueryResults
         );
         GenericProperties<Object> evaluatedProperties = createRole.properties().map(eval);
-        Role.Properties.validateSessionSettings(createRole.roleName(), evaluatedProperties, sessionSettingRegistry);
-        Properties roleProperties = Role.Properties.of(createRole.isUser(), evaluatedProperties, sessionSettingRegistry);
+        Properties roleProperties = Role.Properties.of(
+            createRole.roleName(),
+            createRole.isUser(),
+            false,
+            evaluatedProperties,
+            sessionSettingRegistry);
         if (roleProperties.login() == false && roleProperties.password() != null) {
             throw new UnsupportedOperationException(
                 "Creating a ROLE with a password is not allowed, use CREATE USER instead");

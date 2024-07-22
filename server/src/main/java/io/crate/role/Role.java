@@ -79,7 +79,9 @@ public class Role implements Writeable, ToXContent {
         public static final String PASSWORD_KEY = "password";
         public static final String JWT_KEY = "jwt";
 
-        public static Properties of(boolean login,
+        public static Properties of(String userName,
+                                    boolean login,
+                                    boolean isReset,
                                     GenericProperties<Object> properties,
                                     SessionSettingRegistry sessionSettingRegistry) throws GeneralSecurityException {
             properties.ensureContainsOnly(
@@ -96,27 +98,19 @@ public class Role implements Writeable, ToXContent {
             }
             JwtProperties jwtProperties = JwtProperties.fromMap(properties.getUnsafe(JWT_KEY));
 
+            CoordinatorSessionSettings coordinatorSessionSettings = new CoordinatorSessionSettings(
+                new Role(userName, true, Set.of(), Set.of(), null, null, Map.of()));
             Map<String, Object> sessionSettings = new HashMap<>();
             for (var p : properties.stream()
                 .filter(p -> !PASSWORD_KEY.equals(p.getKey()) && !JWT_KEY.equals(p.getKey())).toList()) {
                 SessionSetting<?> sessionSetting = sessionSettingRegistry.settings().get(p.getKey());
                 assert sessionSetting != null : "sessionSetting shouldn't be null";
+                if (isReset == false) {
+                    sessionSetting.apply(coordinatorSessionSettings, p.getValue());
+                }
                 sessionSettings.put(sessionSetting.name(), p.getValue());
             }
             return new Properties(login, hash, jwtProperties, Collections.unmodifiableMap(sessionSettings));
-        }
-
-        public static void validateSessionSettings(String userName,
-                                                   GenericProperties<Object> properties,
-                                                   SessionSettingRegistry sessionSettingRegistry) {
-            CoordinatorSessionSettings coordinatorSessionSettings = new CoordinatorSessionSettings(
-                new Role(userName, true, Set.of(), Set.of(), null, null, Map.of()));
-            for (var p : properties.stream()
-                .filter(p -> !Properties.PASSWORD_KEY.equals(p.getKey()) && !JWT_KEY.equals(p.getKey())).toList()) {
-                SessionSetting<?> sessionSetting = sessionSettingRegistry.settings().get(p.getKey());
-                assert sessionSetting != null : "sessionSetting shouldn't be null";
-                sessionSetting.apply(coordinatorSessionSettings, p.getValue());
-            }
         }
 
         public static Properties fromXContent(XContentParser parser) throws IOException {

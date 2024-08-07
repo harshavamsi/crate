@@ -61,8 +61,7 @@ public class AzureCopyIntegrationTest extends IntegTestCase {
 
     @Before
     public void setup() {
-        azureContainer = new GenericContainer<>
-                ("mcr.microsoft.com/azure-storage/azurite:3.31.0")
+        azureContainer = new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite:3.31.0")
                 .withCreateContainerCmdModifier(cmd -> cmd.withHostConfig(
                         new HostConfig().withPortBindings(new PortBinding(Ports.Binding.bindPort(10000),
                                 new ExposedPort(10000)))

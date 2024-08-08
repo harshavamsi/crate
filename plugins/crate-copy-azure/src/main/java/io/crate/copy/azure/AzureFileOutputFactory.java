@@ -23,13 +23,10 @@ package io.crate.copy.azure;
 
 import org.elasticsearch.common.settings.Settings;
 
-import io.crate.execution.engine.collect.files.opendal.Scheme;
 import io.crate.execution.engine.export.FileOutput;
 import io.crate.execution.engine.export.FileOutputFactory;
 
 public class AzureFileOutputFactory implements FileOutputFactory {
-
-    public static final String NAME = Scheme.AZBLOB.value();
 
     @Override
     public FileOutput create(Settings withClauseOptions) {

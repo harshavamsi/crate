@@ -21,19 +21,20 @@
 
 package io.crate.copy.azure;
 
+import static io.crate.copy.azure.AzureCopyPlugin.NAME;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.opendal.Operator;
 import org.elasticsearch.common.settings.Settings;
+import org.jetbrains.annotations.NotNull;
 
 import io.crate.execution.dsl.projection.WriterProjection;
-import io.crate.execution.engine.collect.files.opendal.Scheme;
 import io.crate.execution.engine.export.FileOutput;
 
 public class AzureFileOutput implements FileOutput {
@@ -41,13 +42,7 @@ public class AzureFileOutput implements FileOutput {
     private final Map<String, String> config;
 
     public AzureFileOutput(Settings settings) {
-        config = new HashMap<>();
-        for (String property: Scheme.AZBLOB.properties()) {
-            var value = settings.get(property);
-            if (value != null) {
-                config.put(property, value);
-            }
-        }
+        config = AzureBlobStorageSettings.openDALConfig(settings);
     }
 
     @Override
@@ -56,7 +51,7 @@ public class AzureFileOutput implements FileOutput {
         // Closing acquired OutputStream is taken care of by the caller.
         // and closing OperatorOutputStream closes Operator (closes its NativeHandle).
         OutputStream outputStream =
-            Operator.of(Scheme.AZBLOB.value(), config).createOutputStream(azureResourcePath(uri, config.get("account_name")));
+            Operator.of(NAME, config).createOutputStream(azureResourcePath(uri, config.get("account_name")));
         if (compressionType != null) {
             outputStream = new GZIPOutputStream(outputStream);
         }
@@ -68,7 +63,7 @@ public class AzureFileOutput implements FileOutput {
      * Resource URI must start with account name followed by /path/to/dir.
      * We cannot use uri.getPath() directly for URI looking like 'azblob::/path/to/dir', we extract directory on our own.
      */
-    public static String azureResourcePath(URI uri, String accountName) {
+    public static String azureResourcePath(URI uri, @NotNull String accountName) {
         return accountName + uri.toString().replace("azblob:/", "");
     }
 }

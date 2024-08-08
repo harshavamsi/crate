@@ -21,13 +21,14 @@
 
 package io.crate.copy.azure;
 
+import static io.crate.copy.azure.AzureBlobStorageSettings.ACCOUNT_NAME_SETTING;
+import static io.crate.copy.azure.AzureCopyPlugin.NAME;
 import static io.crate.copy.azure.AzureFileOutput.azureResourcePath;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -36,11 +37,11 @@ import java.util.regex.Pattern;
 import org.apache.opendal.Entry;
 import org.apache.opendal.Operator;
 import org.elasticsearch.common.settings.Settings;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import io.crate.execution.engine.collect.files.FileInput;
 import io.crate.execution.engine.collect.files.Globs.GlobPredicate;
-import io.crate.execution.engine.collect.files.opendal.Scheme;
 
 /**
  * File reading components operate with URI.
@@ -63,16 +64,11 @@ public class AzureFileInput implements FileInput {
      * @param uri is in user provided format (azblob://path/to/dir)
      */
     public AzureFileInput(URI uri, Settings settings) {
-        config = new HashMap<>();
-        for (String property: Scheme.AZBLOB.properties()) {
-            var value = settings.get(property);
-            if (value != null) {
-                config.put(property, settings.get(property));
-            }
-        }
-        this.uri = URI.create(azureResourcePath(uri, config.get("account_name")));
+        config = AzureBlobStorageSettings.openDALConfig(settings);
+        String accountName = ACCOUNT_NAME_SETTING.get(settings);
+        this.uri = URI.create(azureResourcePath(uri, accountName));
         // Pre-glob path operates with user-provided URI as GLOB pattern reflects user facing COPY FROM uri format.
-        this.preGlobPath = toPreGlobPath(uri, config.get("account_name"));
+        this.preGlobPath = toPreGlobPath(uri, accountName);
         // Predicate is build on top of transformed URI, because OpenDAL list API operates with Azure specific format (contains account_name).
         this.uriPredicate = new GlobPredicate(this.uri.toString());
     }
@@ -131,7 +127,7 @@ public class AzureFileInput implements FileInput {
      */
     private Operator operator() {
         if (operator == null) {
-            operator = Operator.of(Scheme.AZBLOB.value(), config);
+            operator = Operator.of(NAME, config);
         }
         return operator;
     }
@@ -140,7 +136,7 @@ public class AzureFileInput implements FileInput {
      * @return pre-glob path in Azure compatible format.
      */
     @Nullable
-    public static String toPreGlobPath(URI uri, String accountName) {
+    public static String toPreGlobPath(URI uri, @NotNull String accountName) {
         Matcher hasGlobMatcher = HAS_GLOBS_PATTERN.matcher(uri.toString());
         if (hasGlobMatcher.matches()) {
             return azureResourcePath(URI.create(hasGlobMatcher.group(1)), accountName);

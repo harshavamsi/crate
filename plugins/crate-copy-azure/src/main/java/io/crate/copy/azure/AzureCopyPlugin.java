@@ -30,11 +30,13 @@ import java.util.Map;
 
 public class AzureCopyPlugin extends Plugin implements CopyPlugin {
 
+    public static final String NAME = "azblob";
+
     public Map<String, FileInputFactory> getFileInputFactories() {
-        return Map.of(AzureFileInputFactory.NAME, new AzureFileInputFactory());
+        return Map.of(NAME, new AzureFileInputFactory());
     }
 
     public Map<String, FileOutputFactory> getFileOutputFactories() {
-        return Map.of(AzureFileOutputFactory.NAME, new AzureFileOutputFactory());
+        return Map.of(NAME, new AzureFileOutputFactory());
     }
 }

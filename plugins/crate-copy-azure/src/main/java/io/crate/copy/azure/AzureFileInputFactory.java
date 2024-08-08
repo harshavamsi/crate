@@ -23,15 +23,12 @@ package io.crate.copy.azure;
 
 import io.crate.execution.engine.collect.files.FileInput;
 import io.crate.execution.engine.collect.files.FileInputFactory;
-import io.crate.execution.engine.collect.files.opendal.Scheme;
 
 import org.elasticsearch.common.settings.Settings;
 
 import java.net.URI;
 
 public class AzureFileInputFactory implements FileInputFactory {
-
-    public static final String NAME = Scheme.AZBLOB.value();
 
     @Override
     public FileInput create(URI uri, Settings withClauseOptions) {

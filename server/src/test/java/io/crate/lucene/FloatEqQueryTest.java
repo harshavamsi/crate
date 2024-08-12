@@ -24,7 +24,6 @@ package io.crate.lucene;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.lucene.document.FloatPoint;
-import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.NumericUtils;
@@ -93,30 +92,24 @@ public class FloatEqQueryTest extends LuceneQueryBuilderTest {
     @Test
     public void test_FloatEqQuery_termsQuery() {
         Query query = convert("arr1 = [1.1]");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        BooleanClause clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
-        assertThat(query.getClass().getName()).endsWith("FloatPoint$3"); // the query class is anonymous
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
+        assertThat(query.getClass().getName()).endsWith("FloatPoint$3");
         assertThat(query).hasToString("arr1:{1.1}");
 
         query = convert("arr2 = [1.1]");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
-        // SortedNumericDocValuesRangeQuery.class is not public
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query.getClass().getName()).endsWith("SortedNumericDocValuesSetQuery");
         long l = NumericUtils.floatToSortableInt(1.1f);
         assertThat(query).hasToString("arr2: [" + l + "]");
 
         query = convert("arr3 = [1.1]");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
-        assertThat(query.getClass().getName()).endsWith("FloatPoint$3"); // the query class is anonymous
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
+        assertThat(query.getClass().getName()).endsWith("FloatPoint$3");
         assertThat(query).hasToString("arr3:{1.1}");
 
         query = convert("arr4 = [1.1]");
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
-        assertThat(query).hasToString("(arr4 = [1.1])");
+        assertThat(query.toString()).isEqualTo("(arr4 = [1.1])");
     }
 }

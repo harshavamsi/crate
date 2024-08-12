@@ -23,7 +23,6 @@ package io.crate.lucene;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.search.Query;
@@ -112,43 +111,35 @@ public class StringEqQueryTest extends LuceneQueryBuilderTest {
     @Test
     public void test_StringEqQuery_termsQuery() {
         Query query = convert("arr1 = ['abc']");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        BooleanClause clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(TermInSetQuery.class);
         assertThat(query).hasToString("arr1:(abc)");
 
         query = convert("arr2 = ['abc']");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
-        // SortedSetDocValuesField.newSlowSetQuery is equal to TermInSetQuery + MultiTermQuery.DOC_VALUES_REWRITE
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(TermInSetQuery.class);
-        assertThat(((TermInSetQuery) query).getRewriteMethod()).isEqualTo(MultiTermQuery.DOC_VALUES_REWRITE);
-        assertThat(query).hasToString("arr2:(abc)");
+        // SortedSetDocValuesField.newSlowSetQuery is equal to TermInSetQuery + MultiTermQuery.DOC_VALUES_REWRITE
+        TermInSetQuery termInSetQuery = (TermInSetQuery) query;
+        assertThat((termInSetQuery).getRewriteMethod()).isEqualTo(MultiTermQuery.DOC_VALUES_REWRITE);
+        assertThat(termInSetQuery).hasToString("arr2:(abc)");
 
         query = convert("arr3 = ['abc']");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(TermInSetQuery.class);
         assertThat(query).hasToString("arr3:(abc)");
 
         query = convert("arr4 = ['abc']");
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
-        assertThat(query).hasToString("(arr4 = ['abc'])");
+        assertThat(query.toString()).isEqualTo("(arr4 = ['abc'])");
 
         query = convert("arr5 = ['abc']");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(TermInSetQuery.class);
         assertThat(query).hasToString("arr5:(abc)");
 
         query = convert("arr6 = ['abc']");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query).isExactlyInstanceOf(TermInSetQuery.class);
         assertThat(query).hasToString("arr6:(abc)");
     }

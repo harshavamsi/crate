@@ -22,6 +22,7 @@
 package io.crate.expression.operator;
 
 import static io.crate.common.collections.Lists.flattenUnique;
+import static io.crate.execution.dml.ArrayIndexer.toArrayLengthFieldName;
 import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
 import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
 
@@ -32,7 +33,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.ConstantScoreQuery;
@@ -41,6 +41,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
+import org.elasticsearch.Version;
 import org.elasticsearch.index.mapper.Uid;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,6 +65,7 @@ import io.crate.types.ArrayType;
 import io.crate.types.DataType;
 import io.crate.types.DataTypes;
 import io.crate.types.EqQuery;
+import io.crate.types.IntEqQuery;
 import io.crate.types.ObjectType;
 import io.crate.types.StorageSupport;
 import io.crate.types.TypeSignature;
@@ -193,34 +195,55 @@ public final class EqOperator extends Operator<Object> {
                                                Context context,
                                                boolean hasDocValues,
                                                IndexType indexType) {
-        values = flattenUnique(values);
+        var flattenUniqueValues = flattenUnique(values);
+        var canUseArrayLengthIndex = context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0);
         BooleanQuery.Builder filterClauses = new BooleanQuery.Builder();
         Query genericFunctionFilter = genericFunctionFilter(function, context);
-        if (values.isEmpty()) {
-            // `arrayRef = []` - termsQuery would be null
+        if (flattenUniqueValues.isEmpty()) { // using flattenUnique to catch nested empty arrays
+            if (canUseArrayLengthIndex) {
+                return new IntEqQuery().termQuery(toArrayLengthFieldName(
+                        Objects.requireNonNull(context.tableInfo().getReference(column)),
+                        context.tableInfo()::getReference),
+                    0,
+                    true,
+                    true);
+            } else {
+                // `arrayRef = []` - termsQuery would be null
 
-            if (hasDocValues == false) {
-                //  Cannot use NumTermsPerDocQuery if column store is disabled, for example, ARRAY(GEO_SHAPE).
-                return genericFunctionFilter;
+                if (hasDocValues == false) {
+                    //  Cannot use NumTermsPerDocQuery if column store is disabled, for example, ARRAY(GEO_SHAPE).
+                    return genericFunctionFilter;
+                }
+
+                filterClauses.add(
+                    NumTermsPerDocQuery.forColumn(column, elementType, numDocs -> numDocs == 0),
+                    Occur.MUST
+                );
+                // Still need the genericFunctionFilter to avoid a match where the array contains NULL values.
+                // NULL values are not in the index.
+                filterClauses.add(genericFunctionFilter, Occur.MUST);
             }
-
-            filterClauses.add(
-                NumTermsPerDocQuery.forColumn(column, elementType, numDocs -> numDocs == 0),
-                BooleanClause.Occur.MUST
-            );
-            // Still need the genericFunctionFilter to avoid a match where the array contains NULL values.
-            // NULL values are not in the index.
-            filterClauses.add(genericFunctionFilter, BooleanClause.Occur.MUST);
         } else {
+            if (canUseArrayLengthIndex) {
+                filterClauses.add(
+                    new IntEqQuery().termQuery(toArrayLengthFieldName(
+                            Objects.requireNonNull(context.tableInfo().getReference(column)),
+                            context.tableInfo()::getReference),
+                        values.size(),
+                        true,
+                        true),
+                    Occur.MUST
+                );
+            }
             // wrap boolTermsFilter and genericFunction filter in an additional BooleanFilter to control the ordering of the filters
             // termsFilter is applied first
             // afterwards the more expensive genericFunctionFilter
-            Query termsQuery = termsQuery(column, elementType, values, hasDocValues, indexType);
+            Query termsQuery = termsQuery(column, elementType, flattenUniqueValues, hasDocValues, indexType);
             if (termsQuery == null) {
-                return genericFunctionFilter;
+                return filterClauses.add(genericFunctionFilter, Occur.MUST).build();
             }
-            filterClauses.add(termsQuery, BooleanClause.Occur.MUST);
-            filterClauses.add(genericFunctionFilter, BooleanClause.Occur.MUST);
+            filterClauses.add(termsQuery, Occur.MUST);
+            filterClauses.add(genericFunctionFilter, Occur.MUST);
         }
         return filterClauses.build();
     }
@@ -283,7 +306,7 @@ public final class EqOperator extends Operator<Object> {
             }
 
             preFilters++;
-            boolBuilder.add(innerQuery, BooleanClause.Occur.MUST);
+            boolBuilder.add(innerQuery, Occur.MUST);
         }
         if (preFilters > 0 && preFilters == value.size()) {
             return boolBuilder.build();
@@ -292,7 +315,7 @@ public final class EqOperator extends Operator<Object> {
             if (preFilters == 0) {
                 return genericEqFilter;
             } else {
-                boolBuilder.add(genericFunctionFilter(eq, context), BooleanClause.Occur.FILTER);
+                boolBuilder.add(genericFunctionFilter(eq, context), Occur.FILTER);
                 return boolBuilder.build();
             }
         }

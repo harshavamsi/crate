@@ -23,11 +23,11 @@ package io.crate.lucene;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.FieldExistsQuery;
 import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.search.TermQuery;
 import org.junit.Test;
 
@@ -95,15 +95,12 @@ public class BooleanEqQueryTest extends LuceneQueryBuilderTest {
     @Test
     public void test_BooleanEqQuery_TermsQuery() {
         Query query = convert("arr1 = [true, false, null]");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        BooleanClause clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
+        assertThat(query).isExactlyInstanceOf(TermInSetQuery.class);
         assertThat(query).hasToString("arr1:(F T)");
 
         query = convert("arr2 = [true, false, null]");
-        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
-        clause = ((BooleanQuery) query).clauses().get(0);
-        query = clause.getQuery();
+        query = ((BooleanQuery) query).clauses().get(1).getQuery();
         assertThat(query.getClass().getName()).endsWith("SortedNumericDocValuesSetQuery");
         assertThat(query).hasToString("arr2: [0, 1]");
     }

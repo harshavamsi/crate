@@ -60,6 +60,7 @@ import io.crate.metadata.RelationName;
 import io.crate.metadata.doc.DocSchemaInfo;
 import io.crate.metadata.doc.DocTableInfo;
 import io.crate.role.Role;
+import io.crate.testing.IndexVersionCreated;
 import io.crate.testing.QueryTester;
 import io.crate.testing.SQLExecutor;
 import io.crate.testing.SqlExpressions;
@@ -150,14 +151,16 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
         Query query = convert("y_array = [10, 20, 30]");
         assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
         BooleanQuery booleanQuery = (BooleanQuery) query;
-        assertThat(booleanQuery.clauses().get(0).getQuery()).isInstanceOf(PointInSetQuery.class);
-        assertThat(booleanQuery.clauses().get(1).getQuery()).isExactlyInstanceOf(GenericFunctionQuery.class);
+        assertThat(booleanQuery.clauses().get(1).getQuery()).isInstanceOf(PointInSetQuery.class);
+        assertThat(booleanQuery.clauses().get(2).getQuery()).isExactlyInstanceOf(GenericFunctionQuery.class);
     }
 
     @Test
     public void testEqOnTwoArraysBecomesGenericFunctionQueryAllValuesNull() throws Exception {
         Query query = convert("y_array = [null, null, null]");
-        assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
+        assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
+        BooleanQuery booleanQuery = (BooleanQuery) query;
+        assertThat(booleanQuery.clauses().get(1).getQuery()).isExactlyInstanceOf(GenericFunctionQuery.class);
     }
 
     @Test
@@ -167,8 +170,8 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
         Query query = convert("y_array = ?", new Object[] { values });
         assertThat(query).isExactlyInstanceOf(BooleanQuery.class);
         BooleanQuery booleanQuery = (BooleanQuery) query;
-        assertThat(booleanQuery.clauses().get(0).getQuery()).isInstanceOf(PointInSetQuery.class);
-        assertThat(booleanQuery.clauses().get(1).getQuery()).isExactlyInstanceOf(GenericFunctionQuery.class);
+        assertThat(booleanQuery.clauses().get(1).getQuery()).isInstanceOf(PointInSetQuery.class);
+        assertThat(booleanQuery.clauses().get(2).getQuery()).isExactlyInstanceOf(GenericFunctionQuery.class);
     }
 
     @Test
@@ -651,10 +654,17 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
         );
     }
 
+    @IndexVersionCreated(value = 8_08_00_99) // V_5_8_0
+    @Test
+    public void test_arr_eq_empty_array_literal_is_optimized_before_V590() {
+        Query query = convert("y_array = []");
+        assertThat(query).hasToString("+NumTermsPerDoc: y_array +(y_array = [])");
+    }
+
     @Test
     public void test_arr_eq_empty_array_literal_is_optimized() {
         Query query = convert("y_array = []");
-        assertThat(query).hasToString("+NumTermsPerDoc: y_array +(y_array = [])");
+        assertThat(query).hasToString("_array_length_y_array:[0 TO 0]");
     }
 
     @Test
@@ -812,6 +822,6 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
     public void test_neq_on_array() {
         Query query = convert("(y_array != [1])");
         // (+*:* -(y_array IS NULL)))~1) is required to make sure empty arrays are not filtered by the FieldExistsQuery
-        assertThat(query).hasToString("+(+*:* -(+y_array:{1} +(y_array = [1::bigint]))) +((FieldExistsQuery [field=y_array] (+*:* -(y_array IS NULL)))~1)");
+        assertThat(query).hasToString("+(+*:* -(+_array_length_y_array:[1 TO 1] +y_array:{1} +(y_array = [1::bigint]))) +((FieldExistsQuery [field=y_array] (+*:* -(y_array IS NULL)))~1)");
     }
 }

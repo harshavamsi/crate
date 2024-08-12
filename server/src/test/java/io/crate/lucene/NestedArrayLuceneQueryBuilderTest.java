@@ -25,6 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
+import io.crate.testing.IndexVersionCreated;
+
 public class NestedArrayLuceneQueryBuilderTest extends LuceneQueryBuilderTest {
 
     @Override
@@ -40,13 +42,13 @@ public class NestedArrayLuceneQueryBuilderTest extends LuceneQueryBuilderTest {
     public void test_nested_array_equals() {
         var query = convert("a = [[1], [1, 2], null]");
         // pre-filter by a terms query with 1 and 2 then a generic function query to make sure an exact match
-        assertThat(query.toString()).isEqualTo("+a:{1 2} +(a = [[1], [1, 2], NULL])");
+        assertThat(query.toString()).isEqualTo("+_array_length_a:[3 TO 3] +a:{1 2} +(a = [[1], [1, 2], NULL])");
     }
 
     @Test
     public void test_empty_nested_array_equals() {
         var query = convert("a = [[]]");
-        assertThat(query.toString()).isEqualTo("+NumTermsPerDoc: a +(a = [[]])");
+        assertThat(query.toString()).isEqualTo("_array_length_a:[0 TO 0]");
     }
 
     @Test
@@ -61,5 +63,20 @@ public class NestedArrayLuceneQueryBuilderTest extends LuceneQueryBuilderTest {
         var query = convert("a = any([ [ [1], [1, 2] ], [ [3], [4, 5] ] ])");
         // pre-filter by a terms query with 1, 2, 3, 4, 5 then a generic function query to make sure an exact match
         assertThat(query.toString()).isEqualTo("+a:{1 2 3 4 5} #(a = ANY([[[1], [1, 2]], [[3], [4, 5]]]))");
+    }
+
+    @IndexVersionCreated(value = 8_08_00_99) // V_5_8_0
+    @Test
+    public void test_nested_array_equals_before_V590() {
+        var query = convert("a = [[1], [1, 2], null]");
+        // pre-filter by a terms query with 1 and 2 then a generic function query to make sure an exact match
+        assertThat(query.toString()).isEqualTo("+a:{1 2} +(a = [[1], [1, 2], NULL])");
+    }
+
+    @IndexVersionCreated(value = 8_08_00_99) // V_5_8_0
+    @Test
+    public void test_empty_nested_array_equals_before_V590() {
+        var query = convert("a = [[]]");
+        assertThat(query.toString()).isEqualTo("+NumTermsPerDoc: a +(a = [[]])");
     }
 }

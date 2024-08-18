@@ -24,14 +24,12 @@ package io.crate.expression.operator.any;
 import java.util.List;
 
 import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.common.lucene.search.Queries;
 import org.jetbrains.annotations.NotNull;
 
-import io.crate.expression.operator.EqOperator;
-import io.crate.expression.predicate.IsNullPredicate;
+import io.crate.expression.operator.all.AllEqOperator;
 import io.crate.expression.symbol.Function;
 import io.crate.expression.symbol.Literal;
 import io.crate.lucene.LuceneQueryBuilder.Context;
@@ -58,31 +56,17 @@ public final class AnyNeqOperator extends AnyOperator<Object> {
 
     @Override
     protected Query refMatchesAnyArrayLiteral(Function any, Reference probe, @NotNull List<?> nonNullValues, Context context) {
-        //  col != ANY ([1,2,3]) --> not(col=1 and col=2 and col=3)
-        String columnName = probe.storageIdent();
-        BooleanQuery.Builder andBuilder = new BooleanQuery.Builder();
-        for (Object value : nonNullValues) {
-            var fromPrimitive = EqOperator.fromPrimitive(
-                probe.valueType(),
-                columnName,
-                value,
-                probe.hasDocValues(),
-                probe.indexType());
-            if (fromPrimitive == null) {
-                return null;
-            }
-            andBuilder.add(fromPrimitive, BooleanClause.Occur.MUST);
-        }
-        Query exists = IsNullPredicate.refExistsQuery(probe, context, false);
-        return new BooleanQuery.Builder()
-            .add(Queries.not(andBuilder.build()), Occur.MUST)
-            .add(exists, Occur.FILTER)
-            .build();
+        // col != ANY ([1,2,3]) --> not(col=1 and col=2 and col=3) --> not(col = ALL([1,2,3]))
+        return Queries.not(AllEqOperator.refMatchesAllArrayLiteral(probe, nonNullValues, context));
     }
 
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
     protected Query literalMatchesAnyArrayRef(Function any, Literal<?> probe, Reference candidates, Context context) {
+        return literalMatchesAnyArrayRef(probe, candidates, context);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static Query literalMatchesAnyArrayRef(Literal<?> probe, Reference candidates, Context context) {
         // 1 != any ( col ) -->  gt 1 or lt 1
         String columnName = candidates.storageIdent();
         StorageSupport<?> storageSupport = probe.valueType().storageSupport();
